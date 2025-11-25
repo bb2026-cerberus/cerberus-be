@@ -2,8 +2,8 @@ spring:
   application:
     name: demo
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
   datasource:
-    url: jdbc:postgresql://172.16.210.162:5432/blackbox
-    username: wbsmaster
-    password: wbsmaster
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT}/${DB_SCHEMA}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}

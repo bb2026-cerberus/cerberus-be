@@ -56,6 +56,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
+    // JWT 라이브러리 : Fluent API를 사용하고 있음, Nimbus를 사용하여 JWE를 사용할만큼 보안증 증가시키기엔 복잡도가 너무 올라갈 것 같아서 선택
+    implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
+
 //    developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
 }
 

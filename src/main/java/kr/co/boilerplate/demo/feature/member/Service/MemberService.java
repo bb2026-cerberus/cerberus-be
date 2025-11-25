@@ -1,0 +1,170 @@
+package kr.co.boilerplate.demo.feature.member.Service;
+
+
+import jakarta.persistence.EntityNotFoundException;
+import kr.co.boilerplate.demo.feature.member.Dto.*;
+import kr.co.boilerplate.demo.feature.member.Member;
+import kr.co.boilerplate.demo.feature.member.Repository.MemberRepository;
+import kr.co.boilerplate.demo.feature.member.Role;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@Transactional
+@RequiredArgsConstructor
+public class MemberService {
+
+    private final MemberRepository memberRepository;
+    private final PasswordEncoder passwordEncoder;
+
+
+    public void signUp(MemberSignUpDto memberSignUpDto) throws IllegalArgumentException {
+
+        if (memberRepository.findByEmail(memberSignUpDto.getEmail()).isPresent()) {
+            throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
+        }
+        Member member = Member.builder()
+                .email(memberSignUpDto.getEmail())
+                .password(memberSignUpDto.getPassword())
+                .role(Role.USER)
+                .build();
+
+        member.passwordEncode(passwordEncoder);
+        memberRepository.save(member);
+    }
+    public Member findById(Long id) throws EntityNotFoundException {
+        Member member = memberRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("검색하신 ID의 Member가 없습니다."));
+        return member;
+    }
+    public MemberDetailResDto findMemberDetail(Long id) {
+        Member member = findById(id); // 회원 정보 조회
+
+        // 회원과 관련된 추가 정보 조회
+        int sharingRoomCount = sharingRoomRepository.countByMemberId(id);
+        int reservationCount = reservationRepository.countReservationsByMemberId(id);
+        Integer totalReservationTimeWrapper = reservationRepository.sumReservationTimeByMemberId(id);
+        int totalReservationTime = totalReservationTimeWrapper != null ? totalReservationTimeWrapper : 0;
+        long wins = recordRepository.countByMemberIdAndIsWinner(member.getId(), "Y");
+        long totalParticipations = recordRepository.countByMemberId(member.getId());
+        double winRate = (totalParticipations > 0) ? ((double) wins/totalParticipations) * 100 : 0 ;
+
+        // 모든 사용자에게 반환될 정보를 포함하는 MemberDetailResDto 생성
+        return MemberDetailResDto.builder()
+                .id(member.getId())
+                .nickName(member.getNickname())
+                .email(member.getEmail())
+                .createdTime(member.getCreatedTime())
+                .sharingRoomCount(sharingRoomCount)
+                .reservationCount(reservationCount)
+                .totalReservationTime(totalReservationTime)
+                .wins(wins)
+                .winRate(winRate)
+                .build();
+    }
+
+
+    public void update(Long id, MemberUpdateReqDto memberUpdateReqDto) {
+        Member member = findById(id); // findById 메서드를 활용하여 회원 정보 조회
+
+        // 비밀번호 업데이트 로직 제거
+        // 닉네임과 이메일만 업데이트하는 로직으로 변경
+        member.updateMember(
+                memberUpdateReqDto.getNickName(),
+                memberUpdateReqDto.getEmail()
+        );
+        memberRepository.save(member); // 변경된 회원 정보 저장
+    }
+
+
+    public void delete(Long id) {
+        Member member = findById(id); // findById 메서드 활용
+        member.deleteMember();
+    }
+
+    public MemberListTotalResDto findAll() {
+        List<MemberListResDto> memberListResDtos = memberRepository.findByDelYn("N").stream()
+                .map(member -> MemberListResDto.builder()
+                        .id(member.getId())
+                        .nickName(member.getNickname())
+                        .email(member.getEmail())
+                        .build())
+                .collect(Collectors.toList());
+
+        // 삭제되지 않은 회원만 카운트
+        long totalMembers = memberListResDtos.size();
+
+        return MemberListTotalResDto.builder()
+                .members(memberListResDtos)
+                .totalMembers(totalMembers)
+                .build();
+    }
+
+
+    public void blockMember(Long id) {
+        Member member = findById(id); // findById 메서드 활용
+        member.setBlocked(true);
+        memberRepository.save(member);
+    }
+
+    public void unblockMember(Long id) {
+        Member member = findById(id); // findById 메서드 활용
+        member.setBlocked(false);
+        memberRepository.save(member);
+    }
+    public List<MemberListResDto> findBlockedMembers() {
+        return memberRepository.findByIsBlockedTrue().stream()
+                .map(member -> MemberListResDto.builder()
+                        .id(member.getId())
+                        .nickName(member.getNickname())
+                        .email(member.getEmail())
+                        .build())
+                .collect(Collectors.toList());
+    }
+    public List<ReservationDetailDto> getMemberReservations(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new EntityNotFoundException("Member not found with id: " + memberId));
+
+        List<Reservation> reservations = reservationRepository.findByMember(member);
+
+        return reservations.stream().map(reservation -> new ReservationDetailDto(
+                reservation.getId(),
+                reservation.getDesk().getId(),
+                reservation.getStartTime(),
+                reservation.getEndTime(),
+                reservation.getStatus().name()
+        )).collect(Collectors.toList());
+    }
+
+    public MemberDetailResDto findMemberDetailByEmail(String email) {
+        Member member = memberRepository.findByEmail(email)
+                .orElseThrow(() -> new EntityNotFoundException("검색하신 이메일의 Member가 없습니다."));
+
+        // 회원과 관련된 추가 정보 조회 로직은 동일하게 사용
+        int sharingRoomCount = sharingRoomRepository.countByMemberId(member.getId());
+        int reservationCount = reservationRepository.countReservationsByMemberId(member.getId());
+        Integer totalReservationTimeWrapper = reservationRepository.sumReservationTimeByMemberId(member.getId());
+        int totalReservationTime = totalReservationTimeWrapper != null ? totalReservationTimeWrapper : 0;
+        long wins = recordRepository.countByMemberIdAndIsWinner(member.getId(), "Y");
+        long totalParticipations = recordRepository.countByMemberId(member.getId());
+        double winRate = (totalParticipations > 0) ? ((double) wins/totalParticipations) * 100 : 0;
+
+        return MemberDetailResDto.builder()
+                .id(member.getId())
+                .nickName(member.getNickname())
+                .email(member.getEmail())
+                .createdTime(member.getCreatedTime())
+                .sharingRoomCount(sharingRoomCount)
+                .reservationCount(reservationCount)
+                .totalReservationTime(totalReservationTime)
+                .wins(wins)
+                .winRate(winRate)
+                .build();
+    }
+
+}
+
