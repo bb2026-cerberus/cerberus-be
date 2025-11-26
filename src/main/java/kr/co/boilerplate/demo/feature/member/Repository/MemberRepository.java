@@ -1,6 +1,6 @@
 package kr.co.boilerplate.demo.feature.member.Repository;
 
-import com.wellcom.domain.Member.Member;
+import kr.co.boilerplate.demo.feature.member.Member;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

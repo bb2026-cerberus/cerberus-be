@@ -62,6 +62,10 @@ public class ErrorResponse {
 				);
 	}
 
+	public static String makeMessage(ErrorCode errorCode) {
+		return errorCode.name() + errorCode.getMessage();
+	}
+
 	@Builder
 	public record ValidationError(
 			String field,

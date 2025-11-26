@@ -1,6 +1,7 @@
 package kr.co.boilerplate.demo.feature.oauth2;
 
-import com.wellcom.domain.Member.Role;
+
+import kr.co.boilerplate.demo.feature.member.Role;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;

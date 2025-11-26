@@ -1,10 +1,10 @@
-package kr.co.boilerplate.demo.feature.oauth2.util;
+package kr.co.boilerplate.demo.global.util;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.util.SerializationUtils;
 
+import java.io.*;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Optional;
@@ -14,7 +14,7 @@ public class CookieUtils {
     // 쿠키 가져오기
     public static Optional<Cookie> getCookie(HttpServletRequest request, String name) {
         Cookie[] cookies = request.getCookies();
-        if (cookies != null && cookies.length > 0) {
+        if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if (cookie.getName().equals(name)) {
                     return Optional.of(cookie);
@@ -44,7 +44,7 @@ public class CookieUtils {
     // 쿠키 삭제하기
     public static void deleteCookie(HttpServletRequest request, HttpServletResponse response, String name) {
         Cookie[] cookies = request.getCookies();
-        if (cookies != null && cookies.length > 0) {
+        if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if (cookie.getName().equals(name)) {
                     cookie.setValue("");
@@ -58,12 +58,33 @@ public class CookieUtils {
 
     // 쿠키에 인증 관련 정보를 직렬화하여 저장하기 위한 메소드
     public static String serialize(Object object) {
-        return Base64.getUrlEncoder()
-                .encodeToString(SerializationUtils.serialize(object));
+		try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+				ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+
+			oos.writeObject(object);
+			return Base64.getUrlEncoder().encodeToString(baos.toByteArray());
+
+		} catch (IOException e) {
+			throw new IllegalArgumentException("객체 직렬화 중 에러 발생", e);
+		}
     }
 
     // 쿠키에서 정보를 역직렬화하여 읽기 위한 메소드
     public static <T> T deserialize(Cookie cookie, Class<T> cls) {
-        return cls.cast(SerializationUtils.deserialize(Base64.getUrlDecoder().decode(cookie.getValue())));
+		if (cookie == null || cookie.getValue() == null) {
+			return null;
+		}
+
+		byte[] data = Base64.getUrlDecoder().decode(cookie.getValue());
+
+		try (ByteArrayInputStream bais = new ByteArrayInputStream(data);
+				ObjectInputStream ois = new ObjectInputStream(bais)) {
+
+			Object object = ois.readObject();
+			return cls.cast(object);
+
+		} catch (ClassNotFoundException | IOException e) {
+			throw new IllegalArgumentException("쿠키 역직렬화 중 에러 발생", e);
+		}
     }
 }

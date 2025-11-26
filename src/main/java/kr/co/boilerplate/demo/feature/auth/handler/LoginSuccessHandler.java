@@ -2,6 +2,7 @@ package kr.co.boilerplate.demo.feature.auth.handler;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import kr.co.boilerplate.demo.feature.member.Repository.MemberRepository;
 import kr.co.boilerplate.demo.global.jwt.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,7 +26,9 @@ public class LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
                                         Authentication authentication) throws IOException {
         String email = extractUsername(authentication);
-        String role = memberRepository.findByEmail(email).get().getRole().name();
+        String role = memberRepository.findByEmail(email).map(member ->
+				member.getRole().name())
+				.orElse(null);
         String accessToken = jwtService.createAccessToken(email, role);
         String refreshToken = jwtService.createRefreshToken();
 

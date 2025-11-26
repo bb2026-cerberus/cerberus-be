@@ -1,4 +1,4 @@
-package kr.co.boilerplate.demo.feature.oauth2.userinfo;
+package kr.co.boilerplate.demo.feature.oauth2.dto;
 
 import java.util.Map;
 
@@ -9,6 +9,8 @@ public abstract class OAuth2UserInfo {
     public OAuth2UserInfo(Map<String, Object> attributes) {
         this.attributes = attributes;
     }
+
+	public abstract String getSocialType();
 
     public abstract String getId();
 

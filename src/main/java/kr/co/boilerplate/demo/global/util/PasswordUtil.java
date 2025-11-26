@@ -1,4 +1,4 @@
-package kr.co.boilerplate.demo.feature.oauth2.util;
+package kr.co.boilerplate.demo.global.util;
 
 import java.util.Random;
 

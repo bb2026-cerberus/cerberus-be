@@ -5,8 +5,9 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import kr.co.boilerplate.demo.feature.member.Member;
 import kr.co.boilerplate.demo.feature.member.Repository.MemberRepository;
-import kr.co.boilerplate.demo.feature.oauth2.util.PasswordUtil;
+import kr.co.boilerplate.demo.global.util.PasswordUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.mapping.GrantedAuthoritiesMapper;
 import org.springframework.security.core.authority.mapping.NullAuthoritiesMapper;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -120,13 +122,12 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
      */
     public void saveAuthentication(Member curMember) {
         String password = curMember.getPassword();
-        if (password == null) {
-            password = PasswordUtil.generateRandomPassword();
-        }
 
-        UserDetails userDetailsUser = org.springframework.security.core.userdetails.User.builder()
+        UserDetails userDetailsUser = User.builder()
                 .username(curMember.getEmail())
-                .password(password)
+                .password(password != null
+						? password
+						: PasswordUtil.generateRandomPassword())
                 .roles(curMember.getRole().name())
                 .build();
 

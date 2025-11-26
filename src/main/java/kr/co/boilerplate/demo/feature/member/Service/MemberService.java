@@ -73,7 +73,7 @@ public class MemberService {
 
         // 비밀번호 업데이트 로직 제거
         // 닉네임과 이메일만 업데이트하는 로직으로 변경
-        member.updateMember(
+        member.update(
                 memberUpdateReqDto.getNickName(),
                 memberUpdateReqDto.getEmail()
         );

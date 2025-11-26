@@ -2,10 +2,10 @@ package kr.co.boilerplate.demo.global.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import kr.co.boilerplate.demo.feature.member.Repository.MemberRepository;
-import kr.co.boilerplate.demo.feature.oauth2.handler.OAuth2LoginFailureHandler;
-import kr.co.boilerplate.demo.feature.oauth2.handler.OAuth2LoginSuccessHandler;
-import kr.co.boilerplate.demo.feature.oauth2.repository.HttpCookieOAuth2AuthorizationRequestRepository;
-import kr.co.boilerplate.demo.feature.oauth2.service.CustomOAuth2UserService;
+import kr.co.boilerplate.demo.feature.oauth2.OAuth2LoginFailureHandler;
+import kr.co.boilerplate.demo.feature.oauth2.OAuth2LoginSuccessHandler;
+import kr.co.boilerplate.demo.feature.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
+import kr.co.boilerplate.demo.feature.oauth2.CustomOAuth2UserService;
 import kr.co.boilerplate.demo.feature.auth.filter.CustomJsonUsernamePasswordAuthenticationFilter;
 import kr.co.boilerplate.demo.feature.auth.handler.LoginFailureHandler;
 import kr.co.boilerplate.demo.feature.auth.handler.LoginSuccessHandler;
@@ -19,6 +19,8 @@ import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configurers.HeadersConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -39,44 +41,42 @@ public class SecurityConfig {
     private final CustomOAuth2UserService customOAuth2UserService;
     private final HttpCookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository;
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http
-				.formLogin().disable()
-                .httpBasic().disable()
-                .csrf().disable()
-                .headers().frameOptions().disable()
-                .and()
+	@Bean
+	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+		http
+				.csrf(AbstractHttpConfigurer::disable)
+				.formLogin(AbstractHttpConfigurer::disable)
+				.httpBasic(AbstractHttpConfigurer::disable)
+				.headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
 
-                .cors()
-                .and()
+				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                .sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-                .and()
+				.authorizeHttpRequests(auth -> auth
+						.requestMatchers("/member/**").authenticated()
+						.requestMatchers("/admin/**").hasRole("ADMIN")
+						.anyRequest().permitAll()
+				)
 
-                .authorizeRequests()
-                .antMatchers("/member/**").authenticated()
-                .antMatchers("/admin/**").hasRole("ADMIN")
-                .anyRequest().permitAll()
-                .and()
+				.oauth2Login(oauth2 -> oauth2
+						.authorizationEndpoint(endpoint -> endpoint
+								.baseUri("/oauth2/authorize")
+								.authorizationRequestRepository(cookieOAuth2AuthorizationRequestRepository)
+						)
+						.redirectionEndpoint(endpoint -> endpoint
+								.baseUri("/login/oauth2/code/**")
+						)
+						.userInfoEndpoint(userInfo -> userInfo
+								.userService(customOAuth2UserService)
+						)
+						.successHandler(oAuth2LoginSuccessHandler)
+						.failureHandler(oAuth2LoginFailureHandler)
+				);
 
-                .oauth2Login()
-                    .authorizationEndpoint().baseUri("/oauth2/authorize")
-                    .authorizationRequestRepository(cookieOAuth2AuthorizationRequestRepository)
-                .and()
-                    .redirectionEndpoint().baseUri("/login/oauth2/code/**")
-                .and()
-                    .userInfoEndpoint().userService(customOAuth2UserService)
-                .and()
-                    .successHandler(oAuth2LoginSuccessHandler)
-                    .failureHandler(oAuth2LoginFailureHandler);
+		http.addFilterAfter(customJsonUsernamePasswordAuthenticationFilter(), LogoutFilter.class);
+		http.addFilterBefore(jwtAuthenticationProcessingFilter(), CustomJsonUsernamePasswordAuthenticationFilter.class);
 
-
-        http.addFilterAfter(customJsonUsernamePasswordAuthenticationFilter(), LogoutFilter.class);
-        http.addFilterBefore(jwtAuthenticationProcessingFilter(), CustomJsonUsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
+		return http.build();
+	}
 
     @Bean
     public PasswordEncoder passwordEncoder() {

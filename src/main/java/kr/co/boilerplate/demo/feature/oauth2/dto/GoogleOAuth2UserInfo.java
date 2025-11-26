@@ -1,4 +1,4 @@
-package kr.co.boilerplate.demo.feature.oauth2.userinfo;
+package kr.co.boilerplate.demo.feature.oauth2.dto;
 
 import java.util.Map;
 

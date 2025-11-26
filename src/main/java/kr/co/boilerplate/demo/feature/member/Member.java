@@ -1,18 +1,13 @@
 package kr.co.boilerplate.demo.feature.member;
 
-import com.wellcom.domain.Record.Record;
-import com.wellcom.domain.Reservation.Reservation;
-import com.wellcom.domain.SharingRoom.SharingRoom;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import javax.persistence.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Getter
 @Entity
@@ -23,8 +18,7 @@ public class Member {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    private String nickname;
+    private String name;
     private String email;
     private String password;
     private String imageUrl;
@@ -41,32 +35,11 @@ public class Member {
     private LocalDateTime createdTime;
 
     @Builder.Default
-    private String delYn = "N";
-
-    private int count;
-
-    @OneToMany(mappedBy = "member")
-    List<Record> histories = new ArrayList<>();
-
-    @OneToMany(mappedBy = "member")
-    List<SharingRoom> sharingRooms = new ArrayList<>();
-
-    @OneToMany(mappedBy = "member")
-    List<Reservation> reservations = new ArrayList<>();
-
-    @Builder.Default
-    private boolean isBlocked = false;
-
-    public boolean isBlocked() {
-        return isBlocked;
-    }
-
-    public void setBlocked(boolean blocked) {
-        isBlocked = blocked;
-    }
+	@Column(name = "delete_yn", columnDefinition = "char(1) default 'N'")
+    private String deleteYn = "N";
 
     public void deleteMember() {
-        this.delYn = "Y";
+        this.deleteYn = "Y";
     }
 
     public void passwordEncode(PasswordEncoder passwordEncoder) {
@@ -85,13 +58,9 @@ public class Member {
         return this.socialId != null;
     }
 
-    public void updateMember(String nickname, String email) {
-        if (nickname != null && !nickname.isEmpty()) {
-            this.nickname = nickname;
-        }
-        // 비밀번호 업데이트 로직 제거
-        if (email != null && !email.isEmpty()) {
-            this.email = email;
-        }
+    public Member update(String name, String imageUrl) {
+		this.name = name;
+		this.imageUrl = imageUrl;
+		return this;
     }
 }
