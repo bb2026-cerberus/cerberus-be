@@ -61,6 +61,9 @@ dependencies {
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
 
+    // DB (Example)
+    runtimeOnly 'com.h2database:h2'
+
 //    developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
 }
 

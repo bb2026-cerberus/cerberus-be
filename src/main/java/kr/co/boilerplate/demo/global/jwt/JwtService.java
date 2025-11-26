@@ -1,10 +1,11 @@
 package kr.co.boilerplate.demo.global.jwt;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.nimbusds.jose.Algorithm;
-import com.nimbusds.jwt.JWT;
-import io.jsonwebtoken.Jwt;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import kr.co.boilerplate.demo.feature.member.Repository.MemberRepository;
@@ -13,24 +14,24 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 @Service
+@RequiredArgsConstructor
 @Getter
 @Slf4j
-@RequiredArgsConstructor
 public class JwtService {
 
     @Value("${jwt.secretKey}")
-    private String secretKey;
+    private String secretKeyString;
 
     @Value("${jwt.access.expiration}")
-	private Long accessTokenExpirationPeriod;
+    private Long accessTokenExpirationPeriod;
 
     @Value("${jwt.refresh.expiration}")
     private Long refreshTokenExpirationPeriod;
@@ -47,155 +48,121 @@ public class JwtService {
     private static final String ROLE_CLAIM = "role";
     private static final String BEARER = "Bearer ";
 
-    private final ObjectMapper objectMapper;
     private final MemberRepository memberRepository;
+    private SecretKey secretKey;
+
+    @PostConstruct
+    public void init() {
+        this.secretKey = Keys.hmacShaKeyFor(secretKeyString.getBytes(StandardCharsets.UTF_8));
+    }
 
     /**
-     * createAccessToken() 메소드
-     * AccessToken 생성하는 메소드 Payload에 email과 role 정보를 넣어서 생성
+     * AccessToken 생성
      */
     public String createAccessToken(String email, String role) {
         Date now = new Date();
-		Jwts.builder()
-				.id()
-				.claim()
-				.expiration()
-				.issuedAt()
-				.issuer()
-				.subject()
-				.compressWith()
-				.encryptWith()
-				.compact();
-        return JWT.create()
-                .withSubject(ACCESS_TOKEN_SUBJECT)
-                .withExpiresAt(new Date(now.getTime() + accessTokenExpirationPeriod))
-                .withClaim(EMAIL_CLAIM, email)
-                .withClaim(ROLE_CLAIM, role)
-                .sign(Algorithm.HMAC512(secretKey));
+        return Jwts.builder()
+                .subject(ACCESS_TOKEN_SUBJECT)
+                .claim(EMAIL_CLAIM, email)
+                .claim(ROLE_CLAIM, role)
+                .expiration(new Date(now.getTime() + accessTokenExpirationPeriod))
+                .signWith(secretKey)
+                .compact();
     }
+
     /**
-     * createRefreshToken() 메소드
-     * RefreshToken 생성하는 메소드 DB에 저장되어 있어 따로 Payload에 값을 가지고 있지 않아도 됨
+     * RefreshToken 생성
      */
     public String createRefreshToken() {
         Date now = new Date();
-        return JWT.create()
-                .withSubject(REFRESH_TOKEN_SUBJECT)
-                .withExpiresAt(new Date(now.getTime() + refreshTokenExpirationPeriod))
-                .sign(Algorithm.HMAC512(secretKey));
+        return Jwts.builder()
+                .subject(REFRESH_TOKEN_SUBJECT)
+                .expiration(new Date(now.getTime() + refreshTokenExpirationPeriod))
+                .signWith(secretKey)
+                .compact();
     }
+
     /**
-     * sendAccessToken() 메소드
-     * Response Body에 AccessToken의 값을 담아 반환해주는 메소드
-     * AccessToken이 재발급 될 때 사용
-     * 형식 : { "Authorizaton" : {token} }
+     * AccessToken 헤더 설정
      */
-    public void sendAccessToken(HttpServletResponse response, String accessToken) throws IOException {
+    public void sendAccessToken(HttpServletResponse response, String accessToken) {
         response.setStatus(HttpServletResponse.SC_OK);
-        response.setContentType("application/json");
-        response.setCharacterEncoding("utf-8");
-
-        Map<String, String> token = new HashMap<>();
-        token.put(accessHeader, accessToken);
-
-        String result = objectMapper.writeValueAsString(token);
-        response.getWriter().write(result);
+        response.setHeader(accessHeader, accessToken);
         log.info("재발급된 Access Token : {}", accessToken);
     }
+
     /**
-     * sendAccessAndRefreshToken() 메소드
-     * 초기 로그인 성공 시 Response Body에 두 토큰의 값을 담아 반환해주는 메소드
-     * 형식 : { "Authorization" : {AccessToken}, "AuthorizationRefresh" : {RefreshToken} }
+     * AccessToken + RefreshToken 헤더 설정
      */
-    public void sendAccessAndRefreshToken(HttpServletResponse response, String accessToken, String refreshToken) throws IOException {
+    public void sendAccessAndRefreshToken(HttpServletResponse response, String accessToken, String refreshToken) {
         response.setStatus(HttpServletResponse.SC_OK);
-        response.setContentType("application/json");
-        response.setCharacterEncoding("utf-8");
-
-        Map<String, String> token = new HashMap<>();
-        token.put(accessHeader, accessToken);
-        token.put(refreshHeader, refreshToken);
-
-        String result = objectMapper.writeValueAsString(token);
-        response.getWriter().write(result);
-
-        log.info("Access Token, Refresh Token 바디 설정 완료");
+        response.setHeader(accessHeader, accessToken);
+        response.setHeader(refreshHeader, refreshToken);
+        log.info("Access Token, Refresh Token 헤더 설정 완료");
     }
+
     /**
-     * extractRefreshToken() 메소드
-     * 헤더에 담겨져 온 RefreshToken의 값이 DB에 있는지 확인하는 메소드
-     * 헤더에 담겨져 올 때 앞에 "Bearer "이 붙어서 오기 때문에 제거해주는 스트림 사용
+     * 헤더에서 RefreshToken 추출
      */
     public Optional<String> extractRefreshToken(HttpServletRequest request) {
         return Optional.ofNullable(request.getHeader(refreshHeader))
-                .filter(refreshToken -> refreshToken.startsWith(BEARER))
-                .map(refreshToken -> refreshToken.replace(BEARER, ""));
+                .filter(token -> token.startsWith(BEARER))
+                .map(token -> token.replace(BEARER, ""));
     }
+
     /**
-     * extractAccessToken() 메소드
-     * 헤더에 담겨져 온 AccessToken의 값이 DB에 있는지 확인하는 메소드
-     * 헤더에 담겨져 올 때 앞에 "Bearer "이 붙어서 오기 때문에 제거해주는 스트림 사용
+     * 헤더에서 AccessToken 추출
      */
     public Optional<String> extractAccessToken(HttpServletRequest request) {
         return Optional.ofNullable(request.getHeader(accessHeader))
-                .filter(accessToken -> accessToken.startsWith(BEARER))
-                .map(accessToken -> accessToken.replace(BEARER, ""));
+                .filter(token -> token.startsWith(BEARER))
+                .map(token -> token.replace(BEARER, ""));
     }
+
     /**
-     * extractEmail() 메소드
-     * 기존 JWT 토큰이 HS512 인코딩 방식을 사용했기 때문에 같은 방식으로 디코딩 후 DB에 있는 email과 일치 여부를 확인하는 메소드
-     * 에러 발생 시 401 UNAUTHORIZED 에러 발생
+     * AccessToken에서 Email 추출
      */
-    public Optional<String> extractEmail(String accessToken) throws IOException {
+    public Optional<String> extractEmail(String accessToken) {
         try {
-            return Optional.ofNullable(JWT.require(Algorithm.HMAC512(secretKey))
+            Claims claims = Jwts.parser()
+                    .verifyWith(secretKey)
                     .build()
-                    .verify(accessToken)
-                    .getClaim(EMAIL_CLAIM)
-                    .asString());
+                    .parseSignedClaims(accessToken)
+                    .getPayload();
+            return Optional.ofNullable(claims.get(EMAIL_CLAIM, String.class));
         } catch (Exception e) {
-            throw new IllegalArgumentException("존재하지 않는 이메일입니다.");
+            log.error("액세스 토큰이 유효하지 않습니다.");
+            return Optional.empty();
         }
     }
+
     /**
-     * extractRole() 메소드
-     * 기존 JWT 토큰이 HS512 인코딩 방식을 사용했기 때문에 같은 방식으로 디코딩 후 DB에 있는 role과 일치 여부를 확인하는 메소드
-     * 에러 발생 시 401 UNAUTHORIZED 에러 발생
+     * RefreshToken DB 저장/업데이트
      */
-    public Optional<String> extractRole(String accessToken, HttpServletResponse response) throws IOException{
-        try {
-            return Optional.ofNullable(JWT.require(Algorithm.HMAC512(secretKey))
-                    .build()
-                    .verify(accessToken)
-                    .getClaim(ROLE_CLAIM)
-                    .asString());
-        } catch (Exception e) {
-            throw new IllegalArgumentException("액세스 토큰이 유효하지 않습니다.");
-        }
-    }
-    /**
-     * updateRefreshToken() 메소드
-     * 생성된 RefreshToken을 해당 유저의 DB에 추가하는 메소드
-     * 구글 로그인 성공시 사용되기 때문에 따로 예외처리 X
-     */
+    @Transactional
     public void updateRefreshToken(String email, String refreshToken) {
-        try{
-            memberRepository.findByEmail(email)
-                    .ifPresent(user -> user.updateRefreshToken(refreshToken));
-        } catch (Exception e){
-            throw new IllegalArgumentException("일치하는 회원이 없습니다.");
-        }
+        memberRepository.findByEmail(email)
+                .ifPresentOrElse(
+                        member -> member.updateRefreshToken(refreshToken),
+                        () -> new IllegalArgumentException("일치하는 회원이 없습니다.")
+                );
     }
+
     /**
-     * isTokenValid() 메소드
-     * 헤더에 담겨져온 토큰을 HS512 인증 방식을 통해 디코딩 후 유효성 확인하는 메소드
+     * 토큰 유효성 검사
      */
     public boolean isTokenValid(String token) {
         try {
-            JWT.require(Algorithm.HMAC512(secretKey)).build().verify(token);
+            Jwts.parser()
+                    .verifyWith(secretKey)
+                    .build()
+                    .parseSignedClaims(token);
             return true;
-        } catch (Exception e) {
-            log.error("유효하지 않은 토큰입니다. {}", e.getMessage());
+        } catch (ExpiredJwtException e) {
+            log.error("만료된 토큰입니다.");
+            return false;
+        } catch (JwtException | IllegalArgumentException e) {
+            log.error("유효하지 않은 토큰입니다.");
             return false;
         }
     }
