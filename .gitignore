@@ -39,3 +39,4 @@ out/
 ### ETC ###
 local.env
 logs/
+pgdata/

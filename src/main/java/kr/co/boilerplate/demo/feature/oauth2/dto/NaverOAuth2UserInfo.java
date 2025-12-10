@@ -1,5 +1,7 @@
 package kr.co.boilerplate.demo.feature.oauth2.dto;
 
+import kr.co.boilerplate.demo.feature.oauth2.SocialType;
+
 import java.util.Map;
 
 public class NaverOAuth2UserInfo extends OAuth2UserInfo {
@@ -10,7 +12,7 @@ public class NaverOAuth2UserInfo extends OAuth2UserInfo {
 
 	@Override
 	public String getSocialType() {
-		return "";
+		return SocialType.NAVER.name();
 	}
 
 	@Override

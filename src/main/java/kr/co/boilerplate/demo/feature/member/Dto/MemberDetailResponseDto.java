@@ -10,17 +10,12 @@ import java.time.LocalDateTime;
 @Data
 @Builder
 @AllArgsConstructor
-@JsonInclude(JsonInclude.Include.NON_NULL) // null 값이 있는 필드는 제외
-public class MemberDetailResDto {
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class MemberDetailResponseDto {
     private Long id;
     private String nickName;
     private String email;
     private String password;
     private String role;
     private LocalDateTime createdTime;
-    private int sharingRoomCount;
-    private int reservationCount;
-    private int totalReservationTime;
-    private long wins;
-    private double winRate;
 }

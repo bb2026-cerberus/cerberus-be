@@ -46,7 +46,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 			jwtService.updateRefreshToken(oAuth2User.getEmail(), refreshToken);
 		}
 
-		addCookie(response, "refresh_token", refreshToken, 7 * 24 * 60 * 60); // 7일
+		jwtService.addRefreshTokenCookie(response, refreshToken);
 
 		String targetUrl = determineTargetUrl(request, response, authentication);
 		targetUrl = UriComponentsBuilder.fromUriString(targetUrl)
@@ -75,7 +75,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 		Cookie cookie = new Cookie(name, value);
 		cookie.setPath("/auth/reissue");
 		cookie.setHttpOnly(true);
-		cookie.setSecure(true);
+		cookie.setSecure(false);        // Todo: 운영 상태에서는 true로 변경 필요
 		cookie.setMaxAge(maxAge);
 		response.addCookie(cookie);
 	}

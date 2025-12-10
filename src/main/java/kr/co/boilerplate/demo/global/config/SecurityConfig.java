@@ -10,6 +10,8 @@ import kr.co.boilerplate.demo.feature.oauth2.CustomOAuth2UserService;
 import kr.co.boilerplate.demo.feature.oauth2.HttpCookieOAuth2AuthorizationRequestRepository;
 import kr.co.boilerplate.demo.feature.oauth2.OAuth2LoginFailureHandler;
 import kr.co.boilerplate.demo.feature.oauth2.OAuth2LoginSuccessHandler;
+import kr.co.boilerplate.demo.global.error.CustomAccessDeniedHandler;
+import kr.co.boilerplate.demo.global.error.CustomAuthenticationEntryPoint;
 import kr.co.boilerplate.demo.global.jwt.JwtAuthenticationProcessingFilter;
 import kr.co.boilerplate.demo.global.jwt.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +29,11 @@ import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.logout.LogoutFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
  * Spring Security 설정
@@ -45,15 +52,23 @@ public class SecurityConfig {
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final HttpCookieOAuth2AuthorizationRequestRepository cookieOAuth2AuthorizationRequestRepository;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
+    private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                .exceptionHandling(exception -> exception
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
+                        .accessDeniedHandler(customAccessDeniedHandler)
+                )
 
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/", "/css/**", "/images/**", "/js/**", "/favicon.ico", "/h2-console/**").permitAll()
@@ -78,18 +93,23 @@ public class SecurityConfig {
                         .successHandler(oAuth2LoginSuccessHandler)
                         .failureHandler(oAuth2LoginFailureHandler)
                 );
-
-        // 필터 순서 설정: JwtAuthenticationProcessingFilter -> CustomJsonUsernamePasswordAuthenticationFilter -> LogoutFilter
-        // LogoutFilter 이후에 CustomJson... 필터를 두어 로그인 처리를 하고,
-        // 그보다 먼저 Jwt... 필터를 두어 토큰 검증을 수행하도록 설정 (순서는 로직에 따라 유연하게 조정 가능하지만 보통 JWT 검증을 앞세움)
-        
-        // 1. 로그인 처리 필터 (POST /api/v1/auth/login 요청 시 동작)
+	    
         http.addFilterAfter(customJsonUsernamePasswordAuthenticationFilter(), LogoutFilter.class);
-        
-        // 2. JWT 인증 필터 (모든 요청에 대해 토큰 검증)
         http.addFilterBefore(jwtAuthenticationProcessingFilter(), CustomJsonUsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOriginPatterns(List.of("*")); // TODO: 운영 시 허용할 도메인으로 제한 필요
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
     }
 
     @Bean
@@ -111,7 +131,7 @@ public class SecurityConfig {
 
     @Bean
     public LoginFailureHandler loginFailureHandler() {
-        return new LoginFailureHandler();
+        return new LoginFailureHandler(cookieOAuth2AuthorizationRequestRepository);
     }
 
     @Bean

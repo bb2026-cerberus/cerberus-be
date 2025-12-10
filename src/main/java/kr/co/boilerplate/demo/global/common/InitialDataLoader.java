@@ -21,7 +21,7 @@ public class InitialDataLoader implements CommandLineRunner {
     public void run(String... args) throws Exception {
         if(memberRepository.findByEmail("admin@test.com").isEmpty()){
             Member adminMember = Member.builder()
-                    .nickname("admin")
+		            .nickName("admin")
                     .email("admin@test.com")
                     .password(passwordEncoder.encode("1234"))
                     .role(Role.ADMIN)

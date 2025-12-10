@@ -7,7 +7,14 @@ import java.util.List;
 
 @Data
 @Builder
-public class MemberListTotalResDto {
-    private List<MemberListResDto> members;
+public class MemberListResponseDto {
+    private List<MemberDto> members;
     private long totalMembers;
+	
+	@Builder
+	public record MemberDto(
+			Long id,
+			String nickName,
+			String email
+	) {}
 }

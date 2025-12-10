@@ -41,20 +41,20 @@ public class CustomOAuth2UserService implements OAuth2UserService<OAuth2UserRequ
 		Member createdUser = saveOrUpdate(extractAttributes);
 
 		return new CustomOAuth2User(
-				Collections.singleton(new SimpleGrantedAuthority(createdUser.getRole().getKey())),
+				Collections.singleton(new SimpleGrantedAuthority(createdUser.getRole().getCode())),
 				attributes,
-				extractAttributes.getNameAttributeKey(),
+				extractAttributes.nameAttributeKey(),
 				createdUser.getEmail(),
 				createdUser.getRole()
 		);
 	}
 
 	private Member saveOrUpdate(OAuthAttributes attributes) {
-		Member member = memberRepository.findBySocialId(attributes.getOauth2UserInfo().getId())
+		Member member = memberRepository.findBySocialId(attributes.oauth2UserInfo().getId())
 				.map(entity -> entity.update(
-						attributes.getOauth2UserInfo().getNickname(),
-						attributes.getOauth2UserInfo().getImageUrl()))
-				.orElse(attributes.toEntity(attributes.getOauth2UserInfo()));
+						attributes.oauth2UserInfo().getNickname(),
+						attributes.oauth2UserInfo().getImageUrl()))
+				.orElse(attributes.toEntity(attributes.oauth2UserInfo()));
 
 		return memberRepository.save(member);
 	}

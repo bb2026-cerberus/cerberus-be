@@ -42,18 +42,16 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-
-        // 1. RefreshToken이 오는 경우 (토큰 재발급 요청)
+		
         String refreshToken = jwtService.extractRefreshToken(request)
                 .filter(jwtService::isTokenValid)
                 .orElse(null);
 
         if (refreshToken != null) {
             checkRefreshTokenAndReIssueAccessToken(response, refreshToken);
-            return; // 재발급 후 요청 종료
+            return;
         }
-
-        // 2. AccessToken이 오는 경우 (일반 인증)
+		
         checkAccessTokenAndAuthentication(request, response, filterChain);
     }
 
@@ -77,7 +75,7 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
                                                   FilterChain filterChain) throws ServletException, IOException {
         jwtService.extractAccessToken(request)
                 .filter(jwtService::isTokenValid)
-                .flatMap(jwtService::extractEmail) // JwtService 수정: Optional 반환
+                .flatMap(jwtService::extractEmail)
                 .flatMap(memberRepository::findByEmail)
                 .ifPresent(this::saveAuthentication);
 
@@ -86,7 +84,7 @@ public class JwtAuthenticationProcessingFilter extends OncePerRequestFilter {
 
     public void saveAuthentication(Member curMember) {
         String password = curMember.getPassword();
-        if (password == null) { // 소셜 로그인 유저의 경우 비밀번호가 없을 수 있음
+        if (password == null) {
             password = PasswordUtil.generateRandomPassword();
         }
 

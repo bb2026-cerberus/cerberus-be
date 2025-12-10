@@ -1,5 +1,7 @@
 package kr.co.boilerplate.demo.feature.oauth2.dto;
 
+import kr.co.boilerplate.demo.feature.oauth2.SocialType;
+
 import java.util.Map;
 
 public class GoogleOAuth2UserInfo extends OAuth2UserInfo {
@@ -8,7 +10,12 @@ public class GoogleOAuth2UserInfo extends OAuth2UserInfo {
         super(attributes);
     }
 
-    @Override
+	@Override
+	public String getSocialType() {
+		return SocialType.GOOGLE.name();
+	}
+
+	@Override
     public String getId() {
         return (String) attributes.get("sub");
     }

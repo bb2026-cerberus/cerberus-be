@@ -17,6 +17,12 @@ public class AuthController {
 
 	private final AuthService authService;
 
+	@Operation(summary = "상태 확인 API", description = "서버 상태를 확인합니다.")
+	@GetMapping("/health-check")
+	public ResponseEntity<Void> healthCheck(){
+		return ResponseEntity.ok().build();
+	}
+
 	@Operation(summary = "일반 로그인", description = "이메일과 비밀번호로 로그인하여 JWT 토큰을 발급받습니다.")
 	@PostMapping("/login")
 	public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {

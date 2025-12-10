@@ -29,8 +29,6 @@ public class OAuth2LoginFailureHandler extends SimpleUrlAuthenticationFailureHan
 				.map(Cookie::getValue)
 				.orElse("/");
 
-		exception.printStackTrace(System.err);
-
 		targetUrl = UriComponentsBuilder.fromUriString(targetUrl)
 				.queryParam("error", exception.getLocalizedMessage())
 				.build().toUriString();
@@ -38,5 +36,7 @@ public class OAuth2LoginFailureHandler extends SimpleUrlAuthenticationFailureHan
 		authorizationRequestRepository.removeAuthorizationRequestCookies(request, response);
 
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
+	    
+	    log.info("소셜 로그인에 실패했습니다. 메시지 : {}", exception.getMessage());
     }
 }

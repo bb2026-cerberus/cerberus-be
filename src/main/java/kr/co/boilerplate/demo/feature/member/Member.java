@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
+import java.util.function.Consumer;
 
 @Getter
 @Entity
@@ -18,7 +19,7 @@ public class Member {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String name;
+    private String nickName;
     private String email;
     private String password;
     private String imageUrl;
@@ -30,6 +31,7 @@ public class Member {
 
     private String socialId;
 
+	// Todo: 리프레시 토큰 Redis에서 관리하도록 수정할건지 고민 필요
     private String refreshToken; // 리프레시 토큰
 
     private LocalDateTime createdTime;
@@ -58,8 +60,8 @@ public class Member {
         return this.socialId != null;
     }
 
-    public Member update(String name, String imageUrl) {
-		this.name = name;
+    public Member update(String nickName, String imageUrl) {
+		this.nickName = nickName;
 		this.imageUrl = imageUrl;
 		return this;
     }

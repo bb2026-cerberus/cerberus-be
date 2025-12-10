@@ -10,9 +10,11 @@ import java.util.Map;
 @Getter
 @RequiredArgsConstructor
 public enum SocialType implements BaseEnum<String> {
+	LOCAL("local"),
 	GOOGLE("google"),
 	NAVER("naver"),
-	KAKAO("kakao");
+	KAKAO("kakao"),
+	GITHUB("github");
 
 	private final String code;
 

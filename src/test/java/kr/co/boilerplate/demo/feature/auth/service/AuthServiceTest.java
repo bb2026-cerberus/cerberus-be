@@ -5,6 +5,7 @@ import kr.co.boilerplate.demo.feature.member.Member;
 import kr.co.boilerplate.demo.feature.member.Repository.MemberRepository;
 import kr.co.boilerplate.demo.feature.member.Role;
 import kr.co.boilerplate.demo.global.jwt.JwtService;
+import kr.co.boilerplate.demo.global.error.CustomException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -40,7 +41,7 @@ class AuthServiceTest {
     @DisplayName("회원가입 성공")
     void signup_success() {
         // given
-        SignupRequest request = new SignupRequest("test@test.com", "password", "tester");
+        SignupRequest request = new SignupRequest("test@test.com", "password");
         given(memberRepository.findByEmail(request.email())).willReturn(Optional.empty());
         given(passwordEncoder.encode(request.password())).willReturn("encodedPassword");
         
@@ -65,13 +66,12 @@ class AuthServiceTest {
     @DisplayName("중복 이메일 회원가입 실패")
     void signup_fail_duplicate_email() {
         // given
-        SignupRequest request = new SignupRequest("test@test.com", "password", "tester");
+        SignupRequest request = new SignupRequest("test@test.com", "password");
         given(memberRepository.findByEmail(request.email())).willReturn(Optional.of(Member.builder().build()));
 
         // when & then
         assertThatThrownBy(() -> authService.signup(request))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("이미 가입된 이메일입니다.");
+                .isInstanceOf(CustomException.class);
     }
 
     @Test
