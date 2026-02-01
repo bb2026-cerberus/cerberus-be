@@ -4,17 +4,19 @@ import kr.co.cerberus.feature.member.Member;
 import kr.co.cerberus.feature.member.repository.MemberRepository;
 import kr.co.cerberus.feature.member.Role;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
+//import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
 public class InitialDataLoader implements CommandLineRunner {
     private final MemberRepository memberRepository;
-    private final PasswordEncoder passwordEncoder;
+//    private final PasswordEncoder passwordEncoder;
 
-    public InitialDataLoader(MemberRepository memberRepository, PasswordEncoder passwordEncoder) {
+    public InitialDataLoader(MemberRepository memberRepository
+//            , PasswordEncoder passwordEncoder
+    ) {
         this.memberRepository = memberRepository;
-        this.passwordEncoder = passwordEncoder;
+//        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -23,7 +25,7 @@ public class InitialDataLoader implements CommandLineRunner {
             Member adminMember = Member.builder()
 		            .nickName("admin")
                     .email("admin@test.com")
-                    .password(passwordEncoder.encode("1234"))
+//                    .password(passwordEncoder.encode("1234"))
                     .role(Role.ADMIN)
                     .build();
             memberRepository.save(adminMember);

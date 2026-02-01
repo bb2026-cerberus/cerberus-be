@@ -1,14 +1,12 @@
 package kr.co.cerberus.feature.member.service;
 
 import jakarta.persistence.EntityNotFoundException;
-import kr.co.boilerplate.demo.feature.member.Dto.*;
 import kr.co.cerberus.feature.member.Member;
 import kr.co.cerberus.feature.member.repository.MemberRepository;
 import kr.co.cerberus.feature.member.dto.MemberDetailResponseDto;
 import kr.co.cerberus.feature.member.dto.MemberListResponseDto;
 import kr.co.cerberus.feature.member.dto.MemberUpdateRequestDto;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 

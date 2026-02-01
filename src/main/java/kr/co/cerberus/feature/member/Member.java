@@ -5,7 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 
@@ -43,9 +42,9 @@ public class Member {
         this.deleteYn = "Y";
     }
 
-    public void passwordEncode(PasswordEncoder passwordEncoder) {
-        this.password = passwordEncoder.encode(this.password);
-    }
+//    public void passwordEncode(PasswordEncoder passwordEncoder) {
+//        this.password = passwordEncoder.encode(this.password);
+//    }
 
     public void authorizeUser() {
         this.role = Role.USER;

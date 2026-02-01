@@ -2,7 +2,6 @@ package kr.co.cerberus.feature.member.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import kr.co.boilerplate.demo.feature.member.Dto.*;
 import kr.co.cerberus.feature.member.service.MemberService;
 import kr.co.cerberus.feature.member.dto.MemberDetailResponseDto;
 import kr.co.cerberus.feature.member.dto.MemberListResponseDto;
