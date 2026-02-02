@@ -1,0 +1,17 @@
+services:
+  cerberus-be:
+    image: ${{ secrets.DOCKERHUB_USERNAME }}/cerberus-be:latest
+    container_name: dev-app-container
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+  postgres:
+    image: 'postgres:latest'
+    environment:
+      - 'POSTGRES_DB=mydatabase'
+      - 'POSTGRES_PASSWORD=secret'
+      - 'POSTGRES_USER=myuser'
+    ports:
+      - '54320:5432'
