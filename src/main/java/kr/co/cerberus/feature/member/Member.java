@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(schema = "master", name = "tb_member")
 public class Member {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,9 +30,6 @@ public class Member {
 
     private String socialId;
 
-	// Todo: 리프레시 토큰 Redis에서 관리하도록 수정할건지 고민 필요
-    private String refreshToken; // 리프레시 토큰
-
     private LocalDateTime createdTime;
 
     @Builder.Default
@@ -42,16 +40,8 @@ public class Member {
         this.deleteYn = "Y";
     }
 
-//    public void passwordEncode(PasswordEncoder passwordEncoder) {
-//        this.password = passwordEncoder.encode(this.password);
-//    }
-
     public void authorizeUser() {
         this.role = Role.USER;
-    }
-
-    public void updateRefreshToken(String updateRefreshToken) {
-        this.refreshToken = updateRefreshToken;
     }
 
     public boolean isSocial() {
