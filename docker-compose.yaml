@@ -1,6 +1,6 @@
 services:
   cerberus-be:
-    image: ${{ secrets.DOCKERHUB_USERNAME }}/cerberus-be:latest
+    image: blisle/cerberus-be:latest
     container_name: dev-app-container
     restart: always
     ports:
