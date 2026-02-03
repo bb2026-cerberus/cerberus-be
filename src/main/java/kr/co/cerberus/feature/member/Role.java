@@ -11,7 +11,7 @@ import java.util.Map;
 @Getter
 @RequiredArgsConstructor
 public enum Role implements BaseEnum<String> {
-    ADMIN("ROLE_ADMIN"), USER("ROLE_USER"), GUEST("ROLE_GUEST");
+	MENTOR("ROLE_MENTOR"), MENTEE("ROLE_MENTEE");
 	
 	private final String code;
 	

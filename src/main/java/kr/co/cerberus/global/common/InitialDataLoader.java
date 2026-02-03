@@ -26,7 +26,7 @@ public class InitialDataLoader implements CommandLineRunner {
 		            .nickName("admin")
                     .email("admin@test.com")
 //                    .password(passwordEncoder.encode("1234"))
-                    .role(Role.ADMIN)
+                    .role(Role.MENTOR)
                     .build();
             memberRepository.save(adminMember);
         }
