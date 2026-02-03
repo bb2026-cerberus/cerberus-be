@@ -40,10 +40,6 @@ public class Member {
         this.deleteYn = "Y";
     }
 
-    public void authorizeUser() {
-        this.role = Role.USER;
-    }
-
     public boolean isSocial() {
         return this.socialId != null;
     }
