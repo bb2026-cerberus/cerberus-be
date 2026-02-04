@@ -32,6 +32,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+        # 깃헙 레포 파일 리스트 확인 (디버깅용)
+      - name: Check current directory and files
+        run: |
+          echo "Current directory: $(pwd)"
+          ls -R
+
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
         with:
