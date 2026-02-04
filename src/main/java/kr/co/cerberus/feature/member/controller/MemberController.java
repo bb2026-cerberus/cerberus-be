@@ -19,6 +19,12 @@ import org.springframework.web.bind.annotation.*;
 public class MemberController {
 
     private final MemberService memberService;
+	
+	@Operation(summary = "핑 테스트", description = "필 테스트 전용 API")
+	@GetMapping("/ping")
+	public ResponseEntity<?> pint() {
+		return ResponseEntity.ok().build();
+	}
 
     // 회원 삭제
     @Operation(summary = "회원 삭제", description = "회원 ID를 기반으로 회원을 삭제(탈퇴) 처리합니다.")
