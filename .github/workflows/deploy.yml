@@ -32,12 +32,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-        # 깃헙 레포 파일 리스트 확인 (디버깅용)
-      - name: Check current directory and files
-        run: |
-          echo "Current directory: $(pwd)"
-          ls -R
-
       - name: Connect to Tailscale
         uses: tailscale/github-action@v2
         with:
@@ -53,13 +47,22 @@ jobs:
           key: ${{ secrets.DEV_SSH_KEY }}
           script: mkdir -p ~/app/backend
 
+      - name: Test Tar Command
+        run: |
+          echo "Check if file exists:"
+          ls -l docker-compose.yml
+          echo "Try to create a test tarball:"
+          tar -cvf test.tar.gz docker-compose.yml
+          echo "List tarball content:"
+          tar -tvf test.tar.gz
+
       - name: Copy docker-compose.yml via SCP
-        uses: appleboy/scp-action@master
+        uses: appleboy/scp-action@v1
         with:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
-          source: "./docker-compose.yml"
+          source: "${{ github.workspace }}/docker-compose.yml"
           target: "~/app/backend"
           strip_components: 0
 
