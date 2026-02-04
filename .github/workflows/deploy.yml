@@ -59,7 +59,7 @@ jobs:
           host: ${{ secrets.DEV_HOST }}
           username: ${{ secrets.DEV_USER }}
           key: ${{ secrets.DEV_SSH_KEY }}
-          source: "docker-compose.yml"
+          source: "./docker-compose.yml"
           target: "~/app/backend"
           strip_components: 0
 
