@@ -45,7 +45,7 @@ public class MemberController {
     @GetMapping("/member/{id}/detail")
     public ResponseEntity<CommonResponse<MemberDetailResponseDto>> memberDetail(@PathVariable Long id) {
         MemberDetailResponseDto memberDetail = memberService.findMemberDetail(id);
-        return ResponseEntity.ok(CommonResponse.of(memberDetail, "멤버 상세 조회입니다."));
+        return ResponseEntity.ok(CommonResponse.of(memberDetail));
     }
 
     // 회원 목록 조회
@@ -53,6 +53,6 @@ public class MemberController {
     @GetMapping("admin/member/list")
     public ResponseEntity<CommonResponse<MemberListResponseDto>> memberList() {
         MemberListResponseDto memberListResponse = memberService.findAll();
-        return ResponseEntity.ok(CommonResponse.of(memberListResponse, "멤버 리스트입니다."));
+        return ResponseEntity.ok(CommonResponse.of(memberListResponse));
     }
 }
