@@ -1,6 +1,7 @@
 services:
   cerberus-be:
     image: blisle/cerberus-be:latest
+    container_name: cerberus-be
     restart: always
     ports:
       - "8080:8080"

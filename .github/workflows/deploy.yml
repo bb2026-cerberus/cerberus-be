@@ -66,6 +66,6 @@ jobs:
           key: ${{ secrets.DEV_SSH_KEY }}
           script: |
             cd ~/app/backend
-            docker-compose pull
-            docker-compose up -d
+            docker compose pull
+            docker compose up -d
             docker image prune -f
