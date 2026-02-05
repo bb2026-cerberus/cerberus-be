@@ -1,0 +1,12 @@
+package kr.co.cerberus.feature.planner.repository;
+
+import kr.co.cerberus.feature.planner.Planner;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.time.LocalDate;
+import java.util.Optional;
+
+public interface PlannerRepository extends JpaRepository<Planner, Long> {
+
+	Optional<Planner> findByMenteeIdAndPlanDateAndDeleteYn(Long menteeId, LocalDate planDate, String deleteYn);
+}
