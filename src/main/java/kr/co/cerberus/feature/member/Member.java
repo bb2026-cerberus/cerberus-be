@@ -3,16 +3,11 @@ package kr.co.cerberus.feature.member;
 import jakarta.persistence.*;
 import kr.co.cerberus.global.entity.BaseEntity;
 import lombok.*;
-import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
-
-import java.time.LocalDateTime;
 
 @Getter
 @Entity
 @Builder
-@NoArgsConstructor(access = AccessLevel.PROTECTED) // JPA 기본 생성자 접근 제한
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Table(schema = "master", name = "tb_member")
 public class Member extends BaseEntity {
@@ -21,7 +16,7 @@ public class Member extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "mem_seq_generator")
     @SequenceGenerator(
             name = "mem_seq_generator",
-            sequenceName = "master.tb_member_mem_seq_seq", // 실제 DB에 생성될 시퀀스명
+            sequenceName = "master.tb_member_mem_seq_seq",
             allocationSize = 1
     )
     @Column(name = "mem_seq")
