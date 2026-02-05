@@ -14,7 +14,6 @@ public class MemberListResponseDto {
 	@Builder
 	public record MemberDto(
 			Long id,
-			String nickName,
-			String email
+			String name
 	) {}
 }

@@ -2,10 +2,10 @@ package kr.co.cerberus.feature.member.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import kr.co.cerberus.feature.member.dto.LoginResponseDto;
 import kr.co.cerberus.feature.member.service.MemberService;
 import kr.co.cerberus.feature.member.dto.MemberDetailResponseDto;
 import kr.co.cerberus.feature.member.dto.MemberListResponseDto;
-import kr.co.cerberus.feature.member.dto.MemberUpdateRequestDto;
 import kr.co.cerberus.global.common.CommonResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,16 +16,22 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequiredArgsConstructor
 @Slf4j
+@RequestMapping("/api/member")
 public class MemberController {
 
     private final MemberService memberService;
 	
-	@Operation(summary = "핑 테스트", description = "필 테스트 전용 API")
+	@Operation(summary = "핑 테스트", description = "핑 테스트 전용 API")
 	@GetMapping("/ping")
 	public ResponseEntity<?> pint() {
 		return ResponseEntity.ok().build();
 	}
 
+    @Operation(summary = "로그인", description = "로그인 API")
+    @GetMapping("/login")
+    public ResponseEntity<LoginResponseDto> login(@RequestParam String name, @RequestParam String password) {
+        return ResponseEntity.ok(memberService.login(name, password));
+    }
     // 회원 삭제
     @Operation(summary = "회원 삭제", description = "회원 ID를 기반으로 회원을 삭제(탈퇴) 처리합니다.")
     @DeleteMapping("/member/{id}/delete")
@@ -48,13 +54,5 @@ public class MemberController {
     public ResponseEntity<CommonResponse<MemberListResponseDto>> memberList() {
         MemberListResponseDto memberListResponse = memberService.findAll();
         return ResponseEntity.ok(CommonResponse.of(memberListResponse, "멤버 리스트입니다."));
-    }
-
-    // 회원 정보 수정
-    @Operation(summary = "회원 정보 수정", description = "회원 ID와 수정할 정보를 받아 회원 정보를 갱신합니다.")
-    @PostMapping("/member/{id}/update")
-    public ResponseEntity<CommonResponse<Void>> memberUpdate(@PathVariable Long id, @RequestBody MemberUpdateRequestDto memberUpdateRequestDto) {
-        memberService.update(id, memberUpdateRequestDto);
-        return ResponseEntity.ok().build();
     }
 }

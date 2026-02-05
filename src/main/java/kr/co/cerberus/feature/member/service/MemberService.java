@@ -2,10 +2,13 @@ package kr.co.cerberus.feature.member.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import kr.co.cerberus.feature.member.Member;
+import kr.co.cerberus.feature.member.dto.LoginResponseDto;
 import kr.co.cerberus.feature.member.repository.MemberRepository;
 import kr.co.cerberus.feature.member.dto.MemberDetailResponseDto;
 import kr.co.cerberus.feature.member.dto.MemberListResponseDto;
-import kr.co.cerberus.feature.member.dto.MemberUpdateRequestDto;
+import kr.co.cerberus.global.error.CustomException;
+import kr.co.cerberus.global.error.ErrorCode;
+import kr.co.cerberus.global.error.GlobalExceptionHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,23 +32,10 @@ public class MemberService {
 	    
         return MemberDetailResponseDto.builder()
                 .id(member.getId())
-                .nickName(member.getNickName())
-                .email(member.getEmail())
-                .createdTime(member.getCreatedTime())
+                .name(member.getName())
+                .createdTime(member.getCreateDatetime())
                 .build();
     }
-
-
-    public void update(Long id, MemberUpdateRequestDto memberUpdateRequestDto) {
-        Member member = findById(id);
-		
-        member.update(
-                memberUpdateRequestDto.getEmail(),
-                memberUpdateRequestDto.getImageUrl()
-        );
-        memberRepository.save(member);
-    }
-
 
     public void delete(Long id) {
         Member member = findById(id);
@@ -56,18 +46,25 @@ public class MemberService {
         List<MemberListResponseDto.MemberDto> memberList = memberRepository.findByDeleteYn("N").stream()
                 .map(member -> MemberListResponseDto.MemberDto.builder()
                         .id(member.getId())
-                        .nickName(member.getNickName())
-                        .email(member.getEmail())
+                        .name(member.getName())
                         .build())
                 .collect(Collectors.toList());
 
-        // 삭제되지 않은 회원만 카운트
         long totalMembers = memberList.size();
 
         return MemberListResponseDto.builder()
                 .members(memberList)
                 .totalMembers(totalMembers)
                 .build();
+    }
+
+    public LoginResponseDto login(String name, String password) {
+        Member member = memberRepository.findByNameAndPassword(name, password).orElseThrow(() ->
+                new CustomException(ErrorCode.USER_NOT_FOUND)
+        );
+
+        return LoginResponseDto.from(member);
+
     }
 }
 
