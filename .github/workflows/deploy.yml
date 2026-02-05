@@ -67,5 +67,5 @@ jobs:
           script: |
             cd ~/app/backend
             docker compose pull
-            docker compose up -d
+            docker compose -p cerberus-be up -d --remove-orphans
             docker image prune -f
