@@ -1,4 +1,4 @@
-# Boilerplate - Spring Boot 
+# Boilerplate - Spring Boot
 
 ## 구성 (Services)
     - 기능(Feature)
