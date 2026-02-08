@@ -53,5 +53,7 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
 
 	Optional<Todo> findByIdAndActivateYn(Long id, String activateYn);
 
+    List<Todo> findByMenteeIdAndTodoDateBetweenAndDeleteYn(Long menteeId, LocalDate startDate, LocalDate endDate, String deleteYn);
+
 	long countByMenteeIdInAndTodoDraftYnAfterAndActivateYn(Collection<Long> menteeIds, String todoDraftYnAfter, String activateYn);
 }
