@@ -1,5 +1,6 @@
 package kr.co.cerberus.feature.todo.service;
 
+import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
 import kr.co.cerberus.feature.solution.service.SolutionService;
 import kr.co.cerberus.feature.todo.Todo;
@@ -202,9 +203,9 @@ public class TodoService {
 	}
 
 	@Transactional
-	public void toggleStatus(Long todoId) {
+	public void markComplete(Long todoId) {
 		Todo todo = findById(todoId);
-		todo.toggleComplete();
+		todo.markComplete();
 	}
 
 	@Transactional
@@ -233,9 +234,68 @@ public class TodoService {
 				.build();
 	}
 
+	@Transactional
+	public VerificationResponseDto updateVerification(Long todoId, List<MultipartFile> images) {
+		Todo todo = findById(todoId);
+
+		// 피드백 존재 시 인증사진 수정 불가
+		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N");
+		if (feedback.isPresent()) {
+			throw new CustomException(ErrorCode.INVALID_PARAMETER);
+		}
+
+		// 모든 새 파일 저장
+		List<FileInfo> fileInfos = images.stream()
+				.map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "todos"), null))
+				.toList();
+
+		// todoFile JSONB 업데이트
+		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
+		TodoFileData updated = (existing != null)
+				? existing.updateVerificationImages(fileInfos)
+				: TodoFileData.withVerificationImages(fileInfos);
+
+		todo.updateTodoFile(JsonbUtils.toJson(updated));
+
+		List<String> imageUrls = fileInfos.stream()
+				.map(FileInfo::getFileUrl)
+				.toList();
+
+		return VerificationResponseDto.builder()
+				.imageUrls(imageUrls)
+				.build();
+	}
+
+	@Transactional
+	public VerificationResponseDto deleteVerificationImage(Long todoId) {
+		Todo todo = findById(todoId);
+
+		// 피드백 존재 시 인증사진 삭제 불가
+		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N");
+		if (feedback.isPresent()) {
+			throw new CustomException(ErrorCode.INVALID_PARAMETER);
+		}
+
+		// todoFile JSONB 파싱 -> 인증 사진 URL을 null로 설정
+		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
+		TodoFileData updated = (existing != null)
+				? existing.updateVerificationImages(Collections.emptyList())
+				: TodoFileData.withVerificationImages(Collections.emptyList());
+		todo.updateTodoFile(JsonbUtils.toJson(updated));
+
+		return VerificationResponseDto.builder()
+				.imageUrls(null)
+				.build();
+	}
+
 	private Todo findById(Long id) {
-		return todoRepository.findById(id)
+		Todo todo = todoRepository.findById(id)
 				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+
+		if ("Y".equals(todo.getTodoAssignYn())) {
+			throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
+		}
+		return todo;
 	}
 
     @Transactional
