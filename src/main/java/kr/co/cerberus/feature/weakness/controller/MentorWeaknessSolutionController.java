@@ -33,9 +33,10 @@ public class MentorWeaknessSolutionController {
     }
 
     @Operation(summary = "약점 솔루션 수정", description = "멘토가 등록된 약점 맞춤 솔루션을 수정합니다.")
-    @PutMapping("/{mentorId}")
+    @PutMapping("/{mentorId}/{weaknessSolutionId}")
     public ResponseEntity<CommonResponse<WeaknessSolutionResponseDto>> updateWeaknessSolution(
             @PathVariable Long mentorId,
+            @PathVariable Long weaknessSolutionId,
             @Valid @RequestBody WeaknessSolutionUpdateRequestDto requestDto) {
         WeaknessSolutionResponseDto response = weaknessSolutionService.updateWeaknessSolution(mentorId, requestDto);
         return ResponseEntity.ok(CommonResponse.of(response));
