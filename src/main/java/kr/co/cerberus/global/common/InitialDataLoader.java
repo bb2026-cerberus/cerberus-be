@@ -168,7 +168,7 @@ public class InitialDataLoader implements CommandLineRunner {
                 solutionId = solutions.get(random.nextInt(solutions.size())).getId();
             }
 
-            TodoFileData todoFileData = new TodoFileData(todoFiles, (todoFiles.isEmpty() ? null : todoFiles.get(0).getFileUrl()));
+            TodoFileData todoFileData = TodoFileData.withVerificationImages(todoFiles);
 
             Todo todo = Todo.builder()
                     .menteeId(menteeId)

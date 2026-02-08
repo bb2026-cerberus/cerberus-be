@@ -30,9 +30,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -99,8 +97,24 @@ public class AssignmentService {
 		// TODO: 보안 - 요청한 사용자가 해당 과제의 소유자인지(menteeId 일치 여부) 확인 로직 추가
 		String goalName = getGoalName(todo.getGoalId());
 
-		// goal의 goalFile JSONB 파싱 -> workbook 리스트
-		List<AssignmentDetailResponseDto.WorkbookDto> workbooks = parseGoalFiles(todo.getGoalId());
+		// goal의 goalFile JSONB 파싱 (Goal에 연결된 학습지)
+		List<AssignmentDetailResponseDto.fileDto> goalWorkbooks = parseGoalFiles(todo.getGoalId());
+
+		// todoFile JSONB 파싱
+		TodoFileData todoFileData = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
+
+		// todoFileData의 workbooks와 goalWorkbooks를 병합
+		List<AssignmentDetailResponseDto.fileDto> mergedWorkbooks = new java.util.ArrayList<>(goalWorkbooks);
+		if (todoFileData != null && todoFileData.getWorkbooks() != null) {
+			List<AssignmentDetailResponseDto.fileDto> todoFileWorkbooks = todoFileData.getWorkbooks().stream()
+					.map(file -> AssignmentDetailResponseDto.fileDto.builder()
+							.fileName(file.getFileName())
+							.fileUrl(file.getFileUrl())
+							.description(file.getDescription())
+							.build())
+					.toList();
+			mergedWorkbooks.addAll(todoFileWorkbooks);
+		}
 
 		// 피드백 JSONB 파싱
 		String feedbackContent = feedbackRepository.findByTodoIdAndDeleteYn(assignmentId, "N")
@@ -110,9 +124,17 @@ public class AssignmentService {
 				})
 				.orElse(null);
 
-		// todoFile JSONB 파싱 -> 인증 사진 URL
-		TodoFileData todoFileData = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
-		String verificationImage = (todoFileData != null) ? todoFileData.getVerificationImage() : null;
+		// todoFileData의 verificationImages JSONB 파싱
+		List<AssignmentDetailResponseDto.fileDto> verificationImages = Collections.emptyList();
+		if (todoFileData != null && todoFileData.getVerificationImages() != null) {
+			verificationImages = todoFileData.getVerificationImages().stream()
+					.map(file -> AssignmentDetailResponseDto.fileDto.builder()
+							.fileName(file.getFileName())
+							.fileUrl(file.getFileUrl())
+							.description(file.getDescription())
+							.build())
+					.toList();
+		}
 
 		return AssignmentDetailResponseDto.builder()
 				.assignmentId(todo.getId())
@@ -122,8 +144,8 @@ public class AssignmentService {
 				.date(todo.getTodoDate())
 				.completed("Y".equals(todo.getTodoCompleteYn()))
 				.subject(todo.getTodoSubjects())
-				.workbook(workbooks)
-				.studyVerificationImage(verificationImage)
+				.workbooks(mergedWorkbooks)
+				.studyVerificationImages(verificationImages)
 				.feedback(feedbackContent)
 				.build();
 	}
@@ -140,16 +162,20 @@ public class AssignmentService {
 		// todoFile JSONB에 전체 파일 리스트 저장
 		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 		TodoFileData updated = (existing != null)
-				? existing.updateFiles(fileInfos)
-				: TodoFileData.withFiles(fileInfos);
+				? existing.updateVerificationImages(fileInfos) 
+				: TodoFileData.withVerificationImages(fileInfos);
 
 		todo.updateTodoFile(JsonbUtils.toJson(updated));
 
 		// 인증 사진 업로드 시 자동으로 완료 표시 전환
 		todo.markComplete();
 
+		List<String> imageUrls = fileInfos.stream()
+				.map(FileInfo::getFileUrl)
+				.toList();
+
 		return VerificationResponseDto.builder()
-				.imageUrl(fileInfos.isEmpty() ? null : fileInfos.get(0).getFileUrl())
+				.imageUrls(imageUrls)
 				.build();
 	}
 
@@ -165,13 +191,17 @@ public class AssignmentService {
 		// todoFile JSONB 업데이트
 		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 		TodoFileData updated = (existing != null)
-				? existing.updateFiles(fileInfos)
-				: TodoFileData.withFiles(fileInfos);
+				? existing.updateVerificationImages(fileInfos)
+				: TodoFileData.withVerificationImages(fileInfos);
 
 		todo.updateTodoFile(JsonbUtils.toJson(updated));
 
+		List<String> imageUrls = fileInfos.stream()
+				.map(FileInfo::getFileUrl)
+				.toList();
+
 		return VerificationResponseDto.builder()
-				.imageUrl(fileInfos.isEmpty() ? null : fileInfos.get(0).getFileUrl())
+				.imageUrls(imageUrls)
 				.build();
 	}
 
@@ -182,15 +212,15 @@ public class AssignmentService {
 		// todoFile JSONB 파싱 -> 인증 사진 URL을 null로 설정
 		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 		TodoFileData updated = (existing != null)
-				? existing.updateFiles(null) // 인증 사진 URL을 null로 설정
-				: TodoFileData.withFiles(null);
+				? existing.updateVerificationImages(Collections.emptyList())
+				: TodoFileData.withVerificationImages(Collections.emptyList());
 		todo.updateTodoFile(JsonbUtils.toJson(updated));
 
 		// 인증 사진 삭제 시 미완료 상태로 전환
 		todo.markIncomplete();
 
 		return VerificationResponseDto.builder()
-				.imageUrl(null) // 삭제이므로 imageUrl은 null
+				.imageUrls(null)
 				.build();
 	}
 
@@ -211,17 +241,18 @@ public class AssignmentService {
 				.orElse(null);
 	}
 
-	private List<AssignmentDetailResponseDto.WorkbookDto> parseGoalFiles(Long goalId) {
+	private List<AssignmentDetailResponseDto.fileDto> parseGoalFiles(Long goalId) {
 		if (goalId == null) return Collections.emptyList();
 
+		// goal의 goalFile JSONB 파싱
 		return goalRepository.findByIdAndDeleteYn(goalId, "N")
 				.map(goal -> {
 					List<FileInfo> files = JsonbUtils.fromJson(
 							goal.getGoalFile(), new TypeReference<List<FileInfo>>() {});
-					if (files == null) return Collections.<AssignmentDetailResponseDto.WorkbookDto>emptyList();
+					if (files == null) return Collections.<AssignmentDetailResponseDto.fileDto>emptyList();
 
 					return files.stream()
-							.map(file -> AssignmentDetailResponseDto.WorkbookDto.builder()
+							.map(file -> AssignmentDetailResponseDto.fileDto.builder()
 									.fileName(file.getFileName())
 									.fileUrl(file.getFileUrl())
 									.description(file.getDescription())
