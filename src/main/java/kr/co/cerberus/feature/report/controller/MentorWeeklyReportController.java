@@ -2,6 +2,7 @@ package kr.co.cerberus.feature.report.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import kr.co.cerberus.feature.report.dto.WeeklyMenteeReportResponseDto;
 import kr.co.cerberus.feature.report.dto.WeeklyReportCreateRequestDto;
 import kr.co.cerberus.feature.report.dto.WeeklyReportResponseDto;
 import kr.co.cerberus.feature.report.dto.WeeklyReportUpdateRequestDto;
@@ -70,11 +71,11 @@ public class MentorWeeklyReportController {
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 
-    @Operation(summary = "멘티의 주간 리포트 목록 조회 (멘티용)", description = "멘티가 자신의 주간 리포트 목록을 조회합니다.")
-    @GetMapping("/by-mentee/{menteeId}")
-    public ResponseEntity<CommonResponse<List<WeeklyReportResponseDto>>> getWeeklyReportsByMentee(
-            @PathVariable Long menteeId) {
-        List<WeeklyReportResponseDto> response = weeklyReportService.getWeeklyReportsByMentee(menteeId);
+    @Operation(summary = "멘티의 주간 리포트 목록 조회 (멘티용)", description = "멘티가 자신의 특정 주간 리포트 목록을 조회합니다. yearMonthWeek는 2026년 2월 1주차면 20260201 형식으로 전달")
+    @GetMapping("/by-mentee/{menteeId}/week/{yearMonthWeek}")
+    public ResponseEntity<CommonResponse<WeeklyMenteeReportResponseDto>> getWeeklyReportsByMentee(
+            @PathVariable Long menteeId, @PathVariable String yearMonthWeek) {
+        WeeklyMenteeReportResponseDto response = weeklyReportService.getWeeklyReportsByMentee(menteeId, yearMonthWeek);
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 }
