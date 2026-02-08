@@ -85,6 +85,15 @@ public class TodoController {
 		return ResponseEntity.ok(CommonResponse.of(todos));
 	}
 
+	@Operation(summary = "할일 임시 저장 삭제", description = "임시 저장된 할일을 삭제합니다.")
+	@DeleteMapping("/drafts/{todoId}")
+	public ResponseEntity<CommonResponse<Void>> deleteDraftTodo(
+			@Parameter(description = "할일 ID", example = "1") @PathVariable(name = "todoId") Long todoId) {
+
+		todoService.deleteDraftTodo(todoId);
+		return ResponseEntity.ok(CommonResponse.of(null));
+	}
+
 	@Operation(summary = "할일 완료 상태 변경", description = "할일의 완료 상태를 토글합니다.")
 	@PatchMapping("/{todoId}/completed")
 	public ResponseEntity<CommonResponse<Void>> toggleStatus(

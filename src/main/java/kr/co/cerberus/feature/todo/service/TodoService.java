@@ -241,7 +241,7 @@ public class TodoService {
 		// 피드백 존재 시 인증사진 수정 불가
 		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N");
 		if (feedback.isPresent()) {
-			throw new CustomException(ErrorCode.INVALID_PARAMETER);
+			throw new CustomException(ErrorCode.INVALID_PARAMETER, "피드백이 등록되어 수정이 불가합니다.");
 		}
 
 		// 모든 새 파일 저장
@@ -273,7 +273,7 @@ public class TodoService {
 		// 피드백 존재 시 인증사진 삭제 불가
 		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N");
 		if (feedback.isPresent()) {
-			throw new CustomException(ErrorCode.INVALID_PARAMETER);
+			throw new CustomException(ErrorCode.INVALID_PARAMETER, "피드백이 등록되어 삭제가 불가합니다.");
 		}
 
 		// todoFile JSONB 파싱 -> 인증 사진 URL을 null로 설정
@@ -309,5 +309,16 @@ public class TodoService {
         todo.addTimerSession(request.getStartAt(), request.getEndAt());
     }
 
+	@Transactional
+	public void deleteDraftTodo(Long todoId) {
+		Todo todo = findById(todoId);
+
+		// 임시저장 상태인지 확인
+		if (!"Y".equals(todo.getTodoDraftYn())) {
+			throw new CustomException(ErrorCode.INVALID_PARAMETER);
+		}
+
+		todo.delete();
+	}
 
 }
