@@ -2,6 +2,7 @@ package kr.co.cerberus.feature.assignment.service;
 
 import kr.co.cerberus.feature.assignment.dto.AssignmentDetailResponseDto;
 import kr.co.cerberus.feature.assignment.dto.AssignmentListResponseDto;
+import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
 import kr.co.cerberus.feature.solution.service.SolutionService;
 import kr.co.cerberus.feature.todo.Todo;
@@ -22,13 +23,8 @@ import org.springframework.web.multipart.MultipartFile;
 import kr.co.cerberus.feature.assignment.dto.GroupedAssignmentsResponseDto;
 
 import java.time.LocalDate;
-import java.util.Comparator;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.Set;
 
 @Service
 @Transactional(readOnly = true)
@@ -165,6 +161,12 @@ public class AssignmentService {
 	public VerificationResponseDto updateVerification(Long assignmentId, List<MultipartFile> images) {
 		Todo todo = findAssignmentById(assignmentId);
 
+		// 피드백 존재 시 인증사진 수정 불가
+		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYn(assignmentId, "N");
+		if (feedback.isPresent()) {
+			throw new CustomException(ErrorCode.INVALID_PARAMETER);
+		}
+
 		// 모든 새 파일 저장
 		List<FileInfo> fileInfos = images.stream()
 				.map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "assignments"), null))
@@ -190,6 +192,12 @@ public class AssignmentService {
 	@Transactional
 	public VerificationResponseDto deleteVerificationImage(Long assignmentId) {
 		Todo todo = findAssignmentById(assignmentId);
+
+		// 피드백 존재 시 인증사진 삭제 불가
+		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYn(assignmentId, "N");
+		if (feedback.isPresent()) {
+			throw new CustomException(ErrorCode.INVALID_PARAMETER);
+		}
 
 		// todoFile JSONB 파싱 -> 인증 사진 URL을 null로 설정
 		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
