@@ -1,9 +1,13 @@
 package kr.co.cerberus.global.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 /**
  * 웹 MVC 설정 (CORS 설정 포함)
  *
@@ -22,6 +26,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMVCConfig implements WebMvcConfigurer {
 
+    @Value("${file.upload-dir}")
+    private String uploadDir;
+
     @Override
     public void addCorsMappings(CorsRegistry registry) {
 		registry.addMapping("/**")		// 모든 경로에 대해 CORS 설정을 적용
@@ -30,5 +37,15 @@ public class WebMVCConfig implements WebMvcConfigurer {
 				.allowedHeaders("*")               // 요청 시 허용할 헤더 (JWT 등 커스텀 헤더 포함)
 				.allowCredentials(true)            // 자격 증명 허용 (쿠키, 세션, Authorization 헤더 등)
 				.maxAge(3600);                     // Preflight 요청(OPTIONS)의 캐시 시간 (초 단위, 1시간)
+    }
+
+    @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        Path uploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
+        String pathPattern = "/files/**";
+        String resourceLocation = "file:" + uploadPath.toString() + "/";
+
+        registry.addResourceHandler(pathPattern)
+                .addResourceLocations(resourceLocation);
     }
 }

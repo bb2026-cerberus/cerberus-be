@@ -55,9 +55,33 @@ public class PasswordUtil {
         try {
             SecretKeyFactory skf = SecretKeyFactory.getInstance(ALGORITHM);
             byte[] hash = skf.generateSecret(spec).getEncoded();
-            return Base64.getEncoder().encodeToString(hash);
+            String saltBase64 = Base64.getEncoder().encodeToString(salt);
+            String hashBase64 = Base64.getEncoder().encodeToString(hash);
+            // Salt와 Hash를 구분자로 연결하여 저장
+            return saltBase64 + ":" + hashBase64;
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             throw new RuntimeException("암호화 중 오류 발생", e);
+        }
+    }
+
+    public static boolean matches(String rawPassword, String encodedPassword) {
+        String[] parts = encodedPassword.split(":");
+        if (parts.length != 2) return false;
+
+        byte[] salt = Base64.getDecoder().decode(parts[0]);
+        byte[] hash = Base64.getDecoder().decode(parts[1]);
+
+        PBEKeySpec spec = new PBEKeySpec(rawPassword.toCharArray(), salt, ITERATIONS, KEY_LENGTH);
+        try {
+            SecretKeyFactory skf = SecretKeyFactory.getInstance(ALGORITHM);
+            byte[] testHash = skf.generateSecret(spec).getEncoded();
+            int diff = hash.length ^ testHash.length;
+            for (int i = 0; i < hash.length && i < testHash.length; i++) {
+                diff |= hash[i] ^ testHash[i];
+            }
+            return diff == 0;
+        } catch (Exception e) {
+            return false;
         }
     }
 }

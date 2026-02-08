@@ -29,6 +29,7 @@ public class SolutionService {
     @Transactional
     public SolutionResponseDto createSolution(SolutionCreateRequestDto requestDto) {
         // TODO: 멘토 ID 유효성 검증 (memberRepository를 통해 실제로 존재하는 멘토인지 확인)
+        // TODO: 보안 - 현재 로그인한 사용자의 ID가 requestDto.mentorId()와 일치하는지 검증 로직 추가
         Solution solution = Solution.builder()
                 .mentorId(requestDto.mentorId())
                 .title(requestDto.title())

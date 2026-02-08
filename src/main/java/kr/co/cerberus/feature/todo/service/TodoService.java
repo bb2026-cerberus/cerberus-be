@@ -28,6 +28,7 @@ public class TodoService {
 	private final FeedbackRepository feedbackRepository;
 
 	public List<TodoListResponseDto> findTodos(Long menteeId, LocalDate startDate, LocalDate endDate) {
+		// TODO: 보안 - 현재 로그인한 사용자가 요청한 menteeId에 접근 권한이 있는지 검증 필요
 		List<Todo> todos;
 
 		if (startDate == null) {
