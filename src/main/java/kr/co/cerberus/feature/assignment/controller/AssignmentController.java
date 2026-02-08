@@ -4,11 +4,11 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.co.cerberus.feature.assignment.dto.AssignmentDetailResponseDto;
-import kr.co.cerberus.feature.assignment.dto.AssignmentListResponseDto;
 import kr.co.cerberus.feature.assignment.dto.GroupedAssignmentsResponseDto;
 import kr.co.cerberus.feature.assignment.service.AssignmentService;
 import kr.co.cerberus.feature.todo.dto.VerificationResponseDto;
 import kr.co.cerberus.global.common.CommonResponse;
+import kr.co.cerberus.global.util.FileStorageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -16,8 +16,13 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import org.springframework.http.MediaType;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 @Tag(name = "Assignment", description = "과제 관련 API")
 @RestController
@@ -26,6 +31,7 @@ import java.util.List;
 public class AssignmentController {
 
 	private final AssignmentService assignmentService;
+	private final FileStorageService fileStorageService; // FileStorageService 주입
 
 	@Operation(summary = "과제 목록 조회", description = "전체/기간별/일별 과제 목록을 조회합니다. startDate만 있으면 일별, startDate+endDate는 기간별, 둘 다 없으면 전체 조회")
 	@GetMapping
@@ -84,14 +90,19 @@ public class AssignmentController {
 		return ResponseEntity.ok(CommonResponse.of(response));
 	}
 
-	@Operation(summary = "학습지 PDF 다운로드", description = "과제에 첨부된 학습지 PDF를 다운로드")
-	@GetMapping("/{assignmentId}/workbook/{fileId}")
-	public ResponseEntity<Void> downloadWorkbook(
-			@Parameter(description = "과제 ID", example = "1") @PathVariable(name = "assignmentId") Long assignmentId,
-			@Parameter(description = "파일 ID", example = "1") @PathVariable(name = "fileId") Long fileId) {
-		// TODO: assignmentId와 fileId를 사용하여 다운로드할 특정 학습지 파일의 FileInfo (경로/파일명)를 가져오는 로직 구현 필요
-		//       - 현재 FileInfo에 고유 ID 필드가 없으므로 fileId를 어떤 기준으로 식별할지 정의 필요
-		// TODO: 가져온 FileInfo.fileUrl을 사용하여 실제 서버 파일 시스템에서 파일을 읽어 Resource 객체로 변환
-		return ResponseEntity.ok().build();
+	@Operation(summary = "학습지/파일 다운로드", description = "제공된 파일 URL을 통해 파일을 다운로드")
+	@GetMapping("/download")
+	public ResponseEntity<Resource> downloadFile(
+			@Parameter(description = "파일 URL (예: /solutions/국어/1/file1.pdf)", required = true) @RequestParam("fileUrl") String fileUrl) throws IOException {
+
+		Resource resource = fileStorageService.loadFileAsResource(fileUrl);
+		String contentType = fileStorageService.getContentType(resource);
+
+		String filename = URLEncoder.encode(resource.getFilename(), StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+
+		return ResponseEntity.ok()
+				.contentType(MediaType.parseMediaType(contentType))
+				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+				.body(resource);
 	}
 }
