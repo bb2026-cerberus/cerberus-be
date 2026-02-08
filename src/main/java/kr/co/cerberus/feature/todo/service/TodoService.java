@@ -1,7 +1,7 @@
 package kr.co.cerberus.feature.todo.service;
 
-import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
+import kr.co.cerberus.feature.solution.service.SolutionService;
 import kr.co.cerberus.feature.todo.Todo;
 import kr.co.cerberus.feature.todo.dto.*;
 import kr.co.cerberus.feature.todo.repository.TodoRepository;
@@ -18,8 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -28,9 +28,10 @@ public class TodoService {
 
 	private final TodoRepository todoRepository;
 	private final FeedbackRepository feedbackRepository;
+	private final SolutionService solutionService;
 	private final FileStorageService fileStorageService;
 
-	public List<TodoListResponseDto> findTodos(Long menteeId, LocalDate startDate, LocalDate endDate) {
+	public List<GroupedTodosResponseDto> findTodos(Long menteeId, LocalDate startDate, LocalDate endDate) { // 반환 타입 변경
 		// TODO: 보안 - 현재 로그인한 사용자가 요청한 menteeId에 접근 권한이 있는지 검증 필요
 		List<Todo> todos;
 
@@ -42,19 +43,46 @@ public class TodoService {
 			todos = todoRepository.findByMenteeIdAndTodoDateBetweenAndTodoAssignYnAndDeleteYn(menteeId, startDate, endDate, "N", "N");
 		}
 
-		return todos.stream()
+		// N+1 최적화: 필요한 Solution ID들을 수집하여 한 번에 조회
+		Set<Long> solutionIds = todos.stream()
+				.map(Todo::getSolutionId)
+				.filter(java.util.Objects::nonNull)
+				.collect(Collectors.toSet());
+
+		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionTitle(solutionIds);
+
+		todos.sort(Comparator.comparing(Todo::getTodoDate).reversed());
+		Map<LocalDate, List<TodoListResponseDto>> groupedTodos = todos.stream()
 				.map(todo -> TodoListResponseDto.builder()
 						.todoId(todo.getId())
 						.title(todo.getTodoName())
 						.subject(todo.getTodoSubjects())
+						.solution(solutionTitleMap.get(todo.getSolutionId()))
 						.date(todo.getTodoDate())
 						.completed("Y".equals(todo.getTodoCompleteYn()))
+						.build())
+				.collect(Collectors.groupingBy(TodoListResponseDto::getDate, TreeMap::new, Collectors.toList()));
+
+		return groupedTodos.entrySet().stream()
+				.map(entry -> GroupedTodosResponseDto.builder()
+						.date(entry.getKey())
+						.todos(entry.getValue())
 						.build())
 				.toList();
 	}
 
+	public List<GroupedTodosResponseDto> findTodosWeekly(Long menteeId, LocalDate mondayDate) { // 반환 타입 변경
+		LocalDate startDate = mondayDate;
+		LocalDate endDate = mondayDate.plusDays(6);
+		return findTodos(menteeId, startDate, endDate);
+	}
+
 	public TodoDetailResponseDto findTodoDetail(Long todoId) {
 		Todo todo = findById(todoId);
+		String solutionTitle = solutionService.getSolutionTitleById(todo.getSolutionId());
+
+		// solution의 solutionFile JSONB 파싱 (solution에 연결된 학습지)
+		List<FileInfo> solutionWorkbooks = solutionService.parseSolutionFiles(todo.getSolutionId());
 
 		// 피드백 JSONB 파싱
 		String feedbackContent = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N")
@@ -67,30 +95,22 @@ public class TodoService {
 		// todoFile JSONB 파싱
 		TodoFileData todoFileData = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 
-		List<TodoDetailResponseDto.FileDto> attachments = Collections.emptyList();
-		String verificationImage = null;
-
-		if (todoFileData != null) {
-			if (todoFileData.getAttachments() != null) {
-				attachments = todoFileData.getAttachments().stream()
-						.map(file -> TodoDetailResponseDto.FileDto.builder()
-								.fileName(file.getFileName())
-								.fileUrl(file.getFileUrl())
-								.build())
-						.toList();
-			}
-			verificationImage = todoFileData.getVerificationImage();
+		// todoFileData의 verificationImages JSONB 파싱
+		List<FileInfo> verificationImages = Collections.emptyList();
+		if (todoFileData != null && todoFileData.getVerificationImages() != null) {
+			verificationImages = todoFileData.getVerificationImages();
 		}
 
 		return TodoDetailResponseDto.builder()
 				.todoId(todo.getId())
 				.title(todo.getTodoName())
 				.content(todo.getTodoNote())
+				.solution(solutionTitle)
 				.date(todo.getTodoDate())
 				.completed("Y".equals(todo.getTodoCompleteYn()))
 				.subject(todo.getTodoSubjects())
-				.attachments(attachments)
-				.studyVerificationImage(verificationImage)
+				.workbooks(solutionWorkbooks)
+				.studyVerificationImages(verificationImages)
 				.feedback(feedbackContent)
 				.build();
 	}
@@ -99,10 +119,11 @@ public class TodoService {
 	public TodoCreateResponseDto createTodo(TodoCreateRequestDto request) {
 		Todo todo = Todo.builder()
 				.menteeId(request.getMenteeId())
-				.todoSubjects(request.getSubject())
+				.todoSubjects(request.getSubject().getDescription())
 				.todoName(request.getTitle())
 				.todoNote(request.getContent())
 				.todoDate(request.getDate())
+				.solutionId(request.getSolutionId())
 				.todoAssignYn("N")
 				.todoCompleteYn("N")
 				.build();
@@ -112,10 +133,11 @@ public class TodoService {
 		return TodoCreateResponseDto.builder()
 				.todoId(saved.getId())
 				.title(saved.getTodoName())
+				.content(saved.getTodoNote())
 				.subject(saved.getTodoSubjects())
-				.goal(saved.getTodoNote())
+				.solution(solutionService.getSolutionTitleById(saved.getSolutionId()))
 				.date(saved.getTodoDate())
-				.completed(false)
+				.completed("Y".equals(saved.getTodoCompleteYn()))
 				.build();
 	}
 
@@ -137,13 +159,17 @@ public class TodoService {
 		// todoFile JSONB에 인증 정보 업데이트
 		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 		TodoFileData updated = (existing != null)
-				? existing.updateFiles(fileInfos)
-				: TodoFileData.withFiles(fileInfos);
+				? existing.updateVerificationImages(fileInfos)
+				: TodoFileData.withVerificationImages(fileInfos);
 		
 		todo.updateTodoFile(JsonbUtils.toJson(updated));
 
+		List<String> imageUrls = fileInfos.stream()
+				.map(FileInfo::getFileUrl)
+				.toList();
+
 		return VerificationResponseDto.builder()
-				.imageUrl(fileInfos.isEmpty() ? null : fileInfos.get(0).getFileUrl())
+				.imageUrls(imageUrls)
 				.build();
 	}
 

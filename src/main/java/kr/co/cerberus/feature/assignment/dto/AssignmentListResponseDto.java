@@ -11,7 +11,7 @@ public class AssignmentListResponseDto {
 	private Long assignmentId;
 	private String title;
 	private String subject;
-	private String goal;
+	private String solution;
 	private LocalDate date;
 	private boolean completed;
 }

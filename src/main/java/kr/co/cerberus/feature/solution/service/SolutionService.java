@@ -5,16 +5,16 @@ import kr.co.cerberus.feature.solution.dto.SolutionCreateRequestDto;
 import kr.co.cerberus.feature.solution.dto.SolutionResponseDto;
 import kr.co.cerberus.feature.solution.dto.SolutionUpdateRequestDto;
 import kr.co.cerberus.feature.solution.repository.SolutionRepository;
+import kr.co.cerberus.feature.todo.dto.TodoDetailResponseDto;
 import kr.co.cerberus.global.error.CustomException;
 import kr.co.cerberus.global.error.ErrorCode;
+import kr.co.cerberus.global.jsonb.FileInfo;
 import kr.co.cerberus.global.util.JsonbUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional; // Import Optional
+import java.util.*;
 import java.util.stream.Collectors;
 import com.fasterxml.jackson.core.type.TypeReference; // Import TypeReference
 
@@ -110,4 +110,30 @@ public class SolutionService {
                 solution.getUpdateDatetime()
         );
     }
+
+    public Map<Long, String> getAllSolutionTitle(Set<Long> solutionIds) {
+        return solutionRepository.findAllById(solutionIds).stream()
+                .collect(Collectors.toMap(Solution::getId, Solution::getTitle));
+    }
+
+    public String getSolutionTitleById(Long solutionId) {
+        if (solutionId == null) return null;
+        return solutionRepository.findByIdAndDeleteYn(solutionId, "N")
+                .map(Solution::getTitle)
+                .orElse(null);
+    }
+
+    public List<FileInfo> parseSolutionFiles(Long solutionId) {
+        if (solutionId == null) return Collections.emptyList();
+
+        // solution의 solutionFile JSONB 파싱
+        return solutionRepository.findByIdAndDeleteYn(solutionId, "N")
+                .map(solution -> {
+                    List<FileInfo> files = JsonbUtils.fromJson(
+                            solution.getSolutionFile(), new TypeReference<List<FileInfo>>() {});
+                    return Optional.ofNullable(files).orElse(Collections.emptyList());
+                })
+                .orElse(Collections.emptyList());
+    }
+
 }

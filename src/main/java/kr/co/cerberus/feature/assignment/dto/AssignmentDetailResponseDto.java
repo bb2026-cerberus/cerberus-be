@@ -1,5 +1,6 @@
 package kr.co.cerberus.feature.assignment.dto;
 
+import kr.co.cerberus.global.jsonb.FileInfo;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -12,19 +13,11 @@ public class AssignmentDetailResponseDto {
 	private Long assignmentId;
 	private String title;
 	private String content;
-	private String goal;
+	private String solution;
 	private LocalDate date;
 	private boolean completed;
 	private String subject;
-	private List<fileDto> workbooks;
-	private List<fileDto> studyVerificationImages;
+	private List<FileInfo> workbooks;
+	private List<FileInfo> studyVerificationImages;
 	private String feedback;
-
-	@Getter
-	@Builder
-	public static class fileDto {
-		private String fileName;
-		private String fileUrl;
-		private String description;
-	}
 }

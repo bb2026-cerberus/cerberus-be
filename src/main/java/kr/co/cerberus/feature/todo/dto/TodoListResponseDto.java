@@ -11,6 +11,7 @@ public class TodoListResponseDto {
 	private Long todoId;
 	private String title;
 	private String subject;
+	private String solution;
 	private LocalDate date;
 	private boolean completed;
 }
