@@ -20,9 +20,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import kr.co.cerberus.feature.assignment.dto.GroupedAssignmentsResponseDto;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @Transactional(readOnly = true)
@@ -33,7 +39,7 @@ public class AssignmentService {
 	private final FeedbackRepository feedbackRepository;
 	private final GoalRepository goalRepository;
 
-	public List<AssignmentListResponseDto> findAssignments(Long menteeId, LocalDate startDate, LocalDate endDate) {
+	public List<GroupedAssignmentsResponseDto> findAssignments(Long menteeId, LocalDate startDate, LocalDate endDate) {
 		List<Todo> assignments;
 
 		if (startDate == null) {
@@ -44,7 +50,9 @@ public class AssignmentService {
 			assignments = todoRepository.findByMenteeIdAndTodoDateBetweenAndTodoAssignYnAndDeleteYn(menteeId, startDate, endDate, "Y", "N");
 		}
 
-		return assignments.stream()
+		assignments.sort(Comparator.comparing(Todo::getTodoDate).reversed());
+
+		Stream<AssignmentListResponseDto> assignmentListResponseDtoStream = assignments.stream()
 				.map(todo -> {
 					String goalName = getGoalName(todo.getGoalId());
 					return AssignmentListResponseDto.builder()
@@ -55,8 +63,23 @@ public class AssignmentService {
 							.date(todo.getTodoDate())
 							.completed("Y".equals(todo.getTodoCompleteYn()))
 							.build();
-				})
+				});
+		
+		Map<LocalDate, List<AssignmentListResponseDto>> groupedAssignments = assignmentListResponseDtoStream
+				.collect(Collectors.groupingBy(AssignmentListResponseDto::getDate, TreeMap::new, Collectors.toList()));
+
+		return groupedAssignments.entrySet().stream()
+				.map(entry -> GroupedAssignmentsResponseDto.builder()
+						.date(entry.getKey())
+						.assignments(entry.getValue())
+						.build())
 				.toList();
+	}
+
+	public List<GroupedAssignmentsResponseDto> findAssignmentsWeekly(Long menteeId, LocalDate mondayDate) {
+		LocalDate startDate = mondayDate;
+		LocalDate endDate = mondayDate.plusDays(6);
+		return findAssignments(menteeId, startDate, endDate);
 	}
 
 	public AssignmentDetailResponseDto findAssignmentDetail(Long assignmentId) {
@@ -131,6 +154,25 @@ public class AssignmentService {
 
 		return VerificationResponseDto.builder()
 				.imageUrl(imageUrl)
+				.build();
+	}
+
+	@Transactional
+	public VerificationResponseDto deleteVerificationImage(Long assignmentId) {
+		Todo todo = findAssignmentById(assignmentId);
+
+		// todoFile JSONB 파싱 -> 인증 사진 URL을 null로 설정
+		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
+		TodoFileData updated = (existing != null)
+				? existing.updateVerificationImage(null) // 인증 사진 URL을 null로 설정
+				: TodoFileData.withVerification(null);
+		todo.updateTodoFile(JsonbUtils.toJson(updated));
+
+		// 인증 사진 삭제 시 미완료 상태로 전환
+		todo.markIncomplete();
+
+		return VerificationResponseDto.builder()
+				.imageUrl(null) // 삭제이므로 imageUrl은 null
 				.build();
 	}
 

@@ -86,6 +86,11 @@ public class Todo extends BaseEntity {
 	public void updateTodoFile(String todoFile) {
 		this.todoFile = todoFile;
 	}
+
+	public void markIncomplete() {
+		this.todoCompleteYn = "N";
+		this.status = AssignmentStatus.IN_PROGRESS;
+	}
 	
 	// 과제 상태 업데이트
     public void updateStatus(AssignmentStatus newStatus) {
