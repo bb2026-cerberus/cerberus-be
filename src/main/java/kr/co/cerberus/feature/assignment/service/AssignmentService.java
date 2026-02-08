@@ -13,6 +13,7 @@ import kr.co.cerberus.global.error.ErrorCode;
 import kr.co.cerberus.global.jsonb.FeedbackFileData;
 import kr.co.cerberus.global.jsonb.FileInfo;
 import kr.co.cerberus.global.jsonb.TodoFileData;
+import kr.co.cerberus.global.util.FileStorageService;
 import kr.co.cerberus.global.util.JsonbUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,9 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
@@ -38,6 +42,7 @@ public class AssignmentService {
 	private final TodoRepository todoRepository;
 	private final FeedbackRepository feedbackRepository;
 	private final GoalRepository goalRepository;
+	private final FileStorageService fileStorageService;
 
 	public List<GroupedAssignmentsResponseDto> findAssignments(Long menteeId, LocalDate startDate, LocalDate endDate) {
 		List<Todo> assignments;
@@ -50,21 +55,27 @@ public class AssignmentService {
 			assignments = todoRepository.findByMenteeIdAndTodoDateBetweenAndTodoAssignYnAndDeleteYn(menteeId, startDate, endDate, "Y", "N");
 		}
 
-		assignments.sort(Comparator.comparing(Todo::getTodoDate).reversed());
+        // N+1 최적화: 필요한 Goal ID들을 수집하여 한 번에 조회
+        Set<Long> goalIds = assignments.stream()
+                .map(Todo::getGoalId)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toSet());
 
-		Stream<AssignmentListResponseDto> assignmentListResponseDtoStream = assignments.stream()
-				.map(todo -> {
-					String goalName = getGoalName(todo.getGoalId());
-					return AssignmentListResponseDto.builder()
+        Map<Long, String> goalNameMap = goalRepository.findAllById(goalIds).stream()
+                .collect(Collectors.toMap(Goal::getId, Goal::getGoalName));
+
+
+        assignments.sort(Comparator.comparing(Todo::getTodoDate).reversed());
+        Stream<AssignmentListResponseDto> assignmentListResponseDtoStream = assignments.stream()
+				.map(todo -> AssignmentListResponseDto.builder()
 							.assignmentId(todo.getId())
 							.title(todo.getTodoName())
 							.subject(todo.getTodoSubjects())
-							.goal(goalName)
+							.goal(goalNameMap.get(todo.getGoalId()))
 							.date(todo.getTodoDate())
 							.completed("Y".equals(todo.getTodoCompleteYn()))
-							.build();
-				});
-		
+							.build());
+
 		Map<LocalDate, List<AssignmentListResponseDto>> groupedAssignments = assignmentListResponseDtoStream
 				.collect(Collectors.groupingBy(AssignmentListResponseDto::getDate, TreeMap::new, Collectors.toList()));
 
@@ -85,6 +96,7 @@ public class AssignmentService {
 	public AssignmentDetailResponseDto findAssignmentDetail(Long assignmentId) {
 		Todo todo = findAssignmentById(assignmentId);
 
+		// TODO: 보안 - 요청한 사용자가 해당 과제의 소유자인지(menteeId 일치 여부) 확인 로직 추가
 		String goalName = getGoalName(todo.getGoalId());
 
 		// goal의 goalFile JSONB 파싱 -> workbook 리스트
@@ -120,21 +132,24 @@ public class AssignmentService {
 	public VerificationResponseDto uploadVerification(Long assignmentId, List<MultipartFile> images) {
 		Todo todo = findAssignmentById(assignmentId);
 
-		// TODO: 실제 파일 저장 로직 구현 (다중 파일 업로드)
-		String imageUrl = "/files/temp-" + assignmentId;
+		// 모든 파일을 저장하고 FileInfo 리스트 생성
+		List<FileInfo> fileInfos = images.stream()
+				.map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "assignments"), null))
+				.toList();
 
-		// todoFile JSONB에 인증 사진 URL 저장
+		// todoFile JSONB에 전체 파일 리스트 저장
 		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 		TodoFileData updated = (existing != null)
-				? existing.updateVerificationImage(imageUrl)
-				: TodoFileData.withVerification(imageUrl);
+				? existing.updateFiles(fileInfos)
+				: TodoFileData.withFiles(fileInfos);
+
 		todo.updateTodoFile(JsonbUtils.toJson(updated));
 
 		// 인증 사진 업로드 시 자동으로 완료 표시 전환
 		todo.markComplete();
 
 		return VerificationResponseDto.builder()
-				.imageUrl(imageUrl)
+				.imageUrl(fileInfos.isEmpty() ? null : fileInfos.get(0).getFileUrl())
 				.build();
 	}
 
@@ -142,18 +157,21 @@ public class AssignmentService {
 	public VerificationResponseDto updateVerification(Long assignmentId, List<MultipartFile> images) {
 		Todo todo = findAssignmentById(assignmentId);
 
-		// TODO: 기존 파일 삭제 후 새 파일 저장 로직 구현
-		String imageUrl = "/files/temp-updated-" + assignmentId;
+		// 모든 새 파일 저장
+		List<FileInfo> fileInfos = images.stream()
+				.map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "assignments"), null))
+				.toList();
 
 		// todoFile JSONB 업데이트
 		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 		TodoFileData updated = (existing != null)
-				? existing.updateVerificationImage(imageUrl)
-				: TodoFileData.withVerification(imageUrl);
+				? existing.updateFiles(fileInfos)
+				: TodoFileData.withFiles(fileInfos);
+
 		todo.updateTodoFile(JsonbUtils.toJson(updated));
 
 		return VerificationResponseDto.builder()
-				.imageUrl(imageUrl)
+				.imageUrl(fileInfos.isEmpty() ? null : fileInfos.get(0).getFileUrl())
 				.build();
 	}
 
@@ -164,8 +182,8 @@ public class AssignmentService {
 		// todoFile JSONB 파싱 -> 인증 사진 URL을 null로 설정
 		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 		TodoFileData updated = (existing != null)
-				? existing.updateVerificationImage(null) // 인증 사진 URL을 null로 설정
-				: TodoFileData.withVerification(null);
+				? existing.updateFiles(null) // 인증 사진 URL을 null로 설정
+				: TodoFileData.withFiles(null);
 		todo.updateTodoFile(JsonbUtils.toJson(updated));
 
 		// 인증 사진 삭제 시 미완료 상태로 전환

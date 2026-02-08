@@ -2,6 +2,7 @@ package kr.co.cerberus.feature.member.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import kr.co.cerberus.feature.member.dto.LoginRequestDto;
 import kr.co.cerberus.feature.member.dto.LoginResponseDto;
 import kr.co.cerberus.feature.member.service.MemberService;
 import kr.co.cerberus.feature.member.dto.MemberDetailResponseDto;
@@ -11,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @Tag(name = "Member", description = "회원 관리 관련 API")
 @RestController
@@ -28,9 +30,9 @@ public class MemberController {
 	}
 
     @Operation(summary = "로그인", description = "로그인 API")
-    @GetMapping("/login")
-    public ResponseEntity<CommonResponse<LoginResponseDto>> login(@RequestParam String name, @RequestParam String password) {
-        return ResponseEntity.ok(CommonResponse.of(memberService.login(name, password)));
+    @PostMapping("/login")
+    public ResponseEntity<CommonResponse<LoginResponseDto>> login(@Valid @RequestBody LoginRequestDto request) {
+        return ResponseEntity.ok(CommonResponse.of(memberService.login(request.name(), request.password())));
     }
     // 회원 삭제
     @Operation(summary = "회원 삭제", description = "회원 ID를 기반으로 회원을 삭제(탈퇴) 처리합니다.")

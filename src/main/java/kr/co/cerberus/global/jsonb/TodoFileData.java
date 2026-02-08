@@ -23,16 +23,17 @@ public class TodoFileData {
 	private List<FileInfo> attachments;
 	private String verificationImage;
 
-	public static TodoFileData withVerification(String imageUrl) {
+	public static TodoFileData withFiles(List<FileInfo> files) {
 		return TodoFileData.builder()
-				.verificationImage(imageUrl)
+				.attachments(files)
+				.verificationImage(files.isEmpty() ? null : files.get(0).getFileUrl())
 				.build();
 	}
 
-	public TodoFileData updateVerificationImage(String imageUrl) {
+	public TodoFileData updateFiles(List<FileInfo> files) {
 		return TodoFileData.builder()
-				.attachments(this.attachments)
-				.verificationImage(imageUrl)
+				.attachments(files)
+				.verificationImage(files.isEmpty() ? null : files.get(0).getFileUrl())
 				.build();
 	}
 }
