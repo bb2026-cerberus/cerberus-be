@@ -1,7 +1,6 @@
 package kr.co.cerberus.feature.feedback;
 
 import jakarta.persistence.*;
-import kr.co.cerberus.feature.feedback.domain.FeedbackStatus;
 import kr.co.cerberus.global.entity.BaseEntity;
 import lombok.Builder;
 import lombok.AllArgsConstructor;
@@ -44,39 +43,28 @@ public class Feedback extends BaseEntity {
 	@Column(name = "feed_date") // 멘티 API에서 사용하는 필드이므로 유지
 	private LocalDate feedDate;
 
-	// 신규 추가: 피드백 상태 (임시저장, 대기중, 완료, 취소됨)
-	@Enumerated(EnumType.STRING)
 	@Builder.Default
-	@Column(name = "status", columnDefinition = "varchar(20) default 'DRAFT'", nullable = false)
-	private FeedbackStatus status = FeedbackStatus.DRAFT;
+	@Column(name = "feed_draft_yn", columnDefinition = "bpchar(1) default 'Y'", nullable = false)
+	private String feedDraftYn = "Y";
 
-	// BaseEntity로 관리되므로 제거
-	// @Builder.Default
-	// @Column(name = "delete_yn", columnDefinition = "bpchar(1) default 'N'")
-	// private String deleteYn = "N";
-
-	// BaseEntity로 관리되므로 제거
-	// @Builder.Default
-	// @Column(name = "activate_yn", columnDefinition = "bpchar(1) default 'Y'")
-	// private String activateYn = "Y";
+	@Builder.Default
+	@Column(name = "feed_complete_yn", columnDefinition = "bpchar(1) default 'N'", nullable = false)
+	private String feedCompleteYn = "N";
 
 	// 피드백 파일 내용 업데이트
 	public void updateFeedFile(String feedFile) {
 		this.feedFile = feedFile;
 	}
 
-	// 피드백 상태 업데이트
-    public void updateStatus(FeedbackStatus newStatus) {
-        this.status = newStatus;
-    }
-
 	// 임시저장 상태로 설정
 	public void markAsDraft() {
-		this.status = FeedbackStatus.DRAFT;
+		this.feedDraftYn = "Y";
+		this.feedCompleteYn = "N";
 	}
 
 	// 피드백 완료 상태로 설정
 	public void markAsCompleted() {
-		this.status = FeedbackStatus.COMPLETED;
+		this.feedDraftYn = "N";
+		this.feedCompleteYn = "Y";
 	}
 }

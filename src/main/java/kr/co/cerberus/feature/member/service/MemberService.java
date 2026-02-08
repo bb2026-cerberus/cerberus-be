@@ -18,17 +18,16 @@ public class MemberService {
 
     private final MemberRepository memberRepository;
 
-    public LoginResponseDto login(String id, String password) {
-        Member member = memberRepository.findById(id).orElseThrow(() ->
+    public LoginResponseDto login(String memId, String password) {
+        Member member = memberRepository.findByMemId(memId).orElseThrow(() ->
                 new CustomException(ErrorCode.USER_NOT_FOUND)
         );
 
-        if (!PasswordUtil.matches(password, member.getPassword())) {
+        if (!PasswordUtil.matches(password, member.getMemPassword())) {
             throw new CustomException(ErrorCode.LOCAL_LOGIN_FAIL);
         }
 
         return LoginResponseDto.from(member);
-
     }
 }
 

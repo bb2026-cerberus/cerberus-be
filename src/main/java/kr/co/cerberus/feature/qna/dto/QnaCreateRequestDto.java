@@ -8,8 +8,6 @@ import java.util.List;
 public record QnaCreateRequestDto(
     @NotNull Long menteeId,
     @NotNull Long mentorId,
-    Long relatedEntityId,
-    String relatedEntityType,
     @NotBlank String title,
     @NotBlank String questionContent,
     List<FileInfo> qnaFiles

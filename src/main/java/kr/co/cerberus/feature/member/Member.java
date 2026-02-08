@@ -20,16 +20,16 @@ public class Member extends BaseEntity {
             allocationSize = 1
     )
     @Column(name = "mem_seq")
-    private Long seq;
+    private Long id;
 
     @Column(name ="mem_id")
-    private String id;
+    private String memId;
 
     @Column(name = "mem_name")
-    private String name;
+    private String memName;
 
     @Column(name = "mem_passwd")
-    private String password;
+    private String memPassword;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "mem_role", length = 30)

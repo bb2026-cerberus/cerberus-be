@@ -60,8 +60,8 @@ public class Todo extends BaseEntity {
 	private String todoCompleteYn = "N";
 
 	@Builder.Default
-	@Column(name = "todo_draft_complete_yn", columnDefinition = "bpchar(1) default 'N'", nullable = false)
-	private String todoDraftCompleteYn = "N";
+	@Column(name = "todo_draft_yn", columnDefinition = "bpchar(1) default 'N'", nullable = false)
+	private String todoDraftYn = "N";
 
 	@Column(name = "todo_start_dt")
 	private LocalDateTime todoStartDt;
@@ -75,7 +75,7 @@ public class Todo extends BaseEntity {
 
 	public void markComplete() {
 		this.todoCompleteYn = "Y";
-		this.todoDraftCompleteYn = "Y";
+		this.todoDraftYn = "Y";
 	}
 
 	public void updateTodoFile(String todoFile) {
@@ -88,13 +88,13 @@ public class Todo extends BaseEntity {
 
 	// 임시저장 상태로 설정
 	public void markAsDraft() {
-		this.todoDraftCompleteYn = "N";
+		this.todoDraftYn = "N";
 		this.todoAssignYn = "N";
 	}
 
 	// 과제 할당 상태로 설정
 	public void assign() {
 		this.todoAssignYn = "Y";
-		this.todoDraftCompleteYn = "Y";
+		this.todoDraftYn = "Y";
 	}
 }

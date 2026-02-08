@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,4 +41,6 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
 	List<Todo> findByMenteeIdAndTodoSubjectsAndActivateYn(Long menteeId, String todoSubjects, String activateYn);
 
 	Optional<Todo> findByIdAndActivateYn(Long id, String activateYn);
+
+	long countByMenteeIdInAndTodoDraftYnAfterAndActivateYn(Collection<Long> menteeIds, String todoDraftYnAfter, String activateYn);
 }

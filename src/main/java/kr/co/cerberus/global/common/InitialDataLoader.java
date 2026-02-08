@@ -1,14 +1,12 @@
 package kr.co.cerberus.global.common;
 
 import kr.co.cerberus.feature.feedback.Feedback;
-import kr.co.cerberus.feature.feedback.domain.FeedbackStatus;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
 import kr.co.cerberus.global.jsonb.FeedbackFileData;
 import kr.co.cerberus.feature.member.Member;
 import kr.co.cerberus.feature.member.Role;
 import kr.co.cerberus.feature.member.repository.MemberRepository;
 import kr.co.cerberus.feature.qna.Qna;
-import kr.co.cerberus.feature.qna.domain.QnaStatus;
 import kr.co.cerberus.feature.qna.repository.QnaRepository;
 import kr.co.cerberus.feature.relation.Relation;
 import kr.co.cerberus.feature.relation.repository.RelationRepository;
@@ -59,45 +57,45 @@ public class InitialDataLoader implements CommandLineRunner {
         Member mentee02 = createMemberIfNotFound("mentee02", "박학생", "1234", Role.MENTEE);
 
         // 2. Relation 생성: mentor01과 mentee01, mentee02 연결
-        createRelationIfNotFound(mentor01.getSeq(), mentee01.getSeq());
-        createRelationIfNotFound(mentor01.getSeq(), mentee02.getSeq());
+        createRelationIfNotFound(mentor01.getId(), mentee01.getId());
+        createRelationIfNotFound(mentor01.getId(), mentee02.getId());
 
         // 3. Solution (학습지) 생성
-        List<Solution> solutions = createSolutions(mentor01.getSeq());
+        List<Solution> solutions = createSolutions(mentor01.getId());
 
         // 4. Assignment/Todo 생성
-        List<Todo> mentee01Todos = createAssignments(mentee01.getSeq(), mentor01.getSeq(), solutions);
-        List<Todo> mentee02Todos = createAssignments(mentee02.getSeq(), mentor01.getSeq(), solutions);
+        List<Todo> mentee01Todos = createAssignments(mentee01.getId(), mentor01.getId(), solutions);
+        List<Todo> mentee02Todos = createAssignments(mentee02.getId(), mentor01.getId(), solutions);
 
         // 5. Feedback 생성
-        createFeedbacks(mentor01.getSeq(), mentee01Todos);
-        createFeedbacks(mentor01.getSeq(), mentee02Todos);
+        createFeedbacks(mentor01.getId(), mentee01Todos);
+        createFeedbacks(mentor01.getId(), mentee02Todos);
 
         // 6. Q&A 생성
-        createQnas(mentor01.getSeq(), mentee01.getSeq());
-        createQnas(mentor01.getSeq(), mentee02.getSeq());
+        createQnas(mentor01.getId(), mentee01.getId());
+        createQnas(mentor01.getId(), mentee02.getId());
 
         // 7. WeeklyReport 생성 (지난주: 2026-02-02 월요일 시작 주)
-        createWeeklyReports(mentor01.getSeq(), mentee01.getSeq(), LocalDate.of(2026, 2, 2));
-        createWeeklyReports(mentor01.getSeq(), mentee02.getSeq(), LocalDate.of(2026, 2, 2));
+        createWeeklyReports(mentor01.getId(), mentee01.getId(), LocalDate.of(2026, 2, 2));
+        createWeeklyReports(mentor01.getId(), mentee02.getId(), LocalDate.of(2026, 2, 2));
 
         // 8. WeaknessSolution 생성
-        createWeaknessSolutions(mentor01.getSeq(), mentee01.getSeq());
-        createWeaknessSolutions(mentor01.getSeq(), mentee02.getSeq());
+        createWeaknessSolutions(mentor01.getId(), mentee01.getId());
+        createWeaknessSolutions(mentor01.getId(), mentee02.getId());
 
         System.out.println("[InitialData] 모든 초기 데이터 생성 완료.");
     }
 
-    private Member createMemberIfNotFound(String id, String name, String password, Role role) {
-        return memberRepository.findByName(id).orElseGet(() -> {
+    private Member createMemberIfNotFound(String memId, String memName, String password, Role role) {
+        return memberRepository.findByMemId(memId).orElseGet(() -> {
             Member member = Member.builder()
-                    .id(id)
-                    .name(name)
-                    .password(PasswordUtil.encode(password))
+                    .memId(memId)
+                    .memName(memName)
+                    .memPassword(PasswordUtil.encode(password))
                     .role(role)
                     .build();
             memberRepository.save(member);
-            System.out.println("[InitialData] " + role + " 생성 완료: " + id);
+            System.out.println("[InitialData] " + role + " 생성 완료: " + memId);
             return member;
         });
     }
@@ -148,7 +146,7 @@ public class InitialDataLoader implements CommandLineRunner {
             LocalDate todoDate = START_DATE.plusDays(random.nextInt(TODAY.getDayOfYear() - START_DATE.getDayOfYear() + 1));
             String todoCompleteYn = "N";
             String todoAssignYn = "N";
-            String todoDraftCompleteYn = "N";
+            String todoDraftYn = "N";
             List<FileInfo> todoFiles = new ArrayList<>();
             Long solutionId = null;
             String subject = subjects[random.nextInt(subjects.length)];
@@ -156,14 +154,14 @@ public class InitialDataLoader implements CommandLineRunner {
             if (i % 3 == 0) { // 완료 상태
                 todoCompleteYn = "Y";
                 todoAssignYn = "Y";
-                todoDraftCompleteYn = "Y";
+                todoDraftYn = "Y";
                 todoFiles.add(createFileInfo("verification_" + menteeId + "_" + i + ".jpg", "/verifications/" + menteeId + "/" + i + ".jpg", "인증 사진"));
             } else if (i % 3 == 1) { // 할당된 상태 (진행중)
                 todoAssignYn = "Y";
-                todoDraftCompleteYn = "Y";
+                todoDraftYn = "Y";
             } else { // 임시저장 상태
                 todoAssignYn = "N";
-                todoDraftCompleteYn = "N";
+                todoDraftYn = "N";
             }
 
             // Solution과 연결 (랜덤하게)
@@ -184,7 +182,7 @@ public class InitialDataLoader implements CommandLineRunner {
                     .todoSubjects(subject)
                     .todoAssignYn(todoAssignYn)
                     .todoCompleteYn(todoCompleteYn)
-                    .todoDraftCompleteYn(todoDraftCompleteYn)
+                    .todoDraftYn(todoDraftYn)
                     .build();
             todos.add(todoRepository.save(todo));
         }
@@ -197,11 +195,13 @@ public class InitialDataLoader implements CommandLineRunner {
         int feedbackCount = 0;
         for (Todo todo : menteeTodos) {
             if ("Y".equals(todo.getTodoCompleteYn()) && random.nextBoolean()) { // 완료된 과제 중 절반 정도만 피드백
-                FeedbackStatus status = random.nextBoolean() ? FeedbackStatus.COMPLETED : FeedbackStatus.DRAFT;
+                String feedDraftYn = random.nextBoolean() ? "N" : "Y";
+                String feedCompleteYn = "N".equals(feedDraftYn) ? "Y" : "N";
+
                 List<FileInfo> feedbackFiles = List.of(
                         createFileInfo("feedback_" + todo.getId() + "_file.pdf", "/feedbacks/" + todo.getId() + "/file.pdf", "피드백 첨부 자료")
                 );
-                String feedbackContent = "멘토 피드백 내용: " + todo.getTodoName() + "에 대한 상세 피드백입니다. (" + status.getDescription() + ")";
+                String feedbackContent = "멘토 피드백 내용: " + todo.getTodoName() + "에 대한 상세 피드백입니다.";
                 String feedbackSummary = "풀이과정을 자세히 쓰기 (" + todo.getTodoName() + ")";
                 FeedbackFileData feedbackData = new FeedbackFileData(
                         feedbackContent,
@@ -214,7 +214,8 @@ public class InitialDataLoader implements CommandLineRunner {
                         .mentorId(mentorId)
                         .feedFile(JsonbUtils.toJson(feedbackData))
                         .feedDate(todo.getTodoDate().plusDays(1)) // 과제 다음날 피드백
-                        .status(status)
+                        .feedDraftYn(feedDraftYn)
+                        .feedCompleteYn(feedCompleteYn)
                         .build();
                 feedbackRepository.save(feedback);
                 feedbackCount++;
@@ -233,13 +234,12 @@ public class InitialDataLoader implements CommandLineRunner {
                     .title("Q&A 질문 " + i + "입니다.")
                     .questionContent("멘티가 묻습니다: " + i + "번째 질문 내용입니다.")
                     .qnaFile(JsonbUtils.toJson(qnaFiles))
-                    .status(QnaStatus.PENDING)
+                    .qnaCompleteYn("N")
                     .build();
             Qna savedQna = qnaRepository.save(qna);
 
             if (random.nextBoolean()) {
                 savedQna.updateAnswer("멘토가 답변합니다: " + i + "번째 질문에 대한 답변입니다.");
-                savedQna.updateStatus(QnaStatus.ANSWERED);
                 qnaRepository.save(savedQna);
             }
 
