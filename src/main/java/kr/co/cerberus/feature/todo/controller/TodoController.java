@@ -95,4 +95,15 @@ public class TodoController {
 		VerificationResponseDto response = todoService.uploadVerification(todoId, images);
 		return ResponseEntity.ok(CommonResponse.of(response));
 	}
+
+
+    @Operation(summary = "할일 타이머 세션 추가", description = "Todo에 타이머 세션(시작~종료)을 추가로 저장합니다.")
+    @PostMapping("/{todoId}/timer/sessions")
+    public ResponseEntity<CommonResponse<Void>> addTimerSession(
+            @PathVariable Long todoId,
+            @RequestBody TodoTimerSessionCreateRequestDto request
+    ) {  todoService.addTimerSession(todoId, request);
+        return ResponseEntity.ok(CommonResponse.of(null));
+    }
+
 }
