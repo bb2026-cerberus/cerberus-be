@@ -1,6 +1,5 @@
 package kr.co.cerberus.global.common;
 
-import kr.co.cerberus.feature.assignment.domain.AssignmentStatus;
 import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.domain.FeedbackStatus;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
@@ -19,7 +18,7 @@ import kr.co.cerberus.feature.solution.Solution;
 import kr.co.cerberus.feature.solution.repository.SolutionRepository;
 import kr.co.cerberus.feature.todo.Todo;
 import kr.co.cerberus.feature.todo.repository.TodoRepository;
-import kr.co.cerberus.feature.weakness.WeaknessSolution; // Add this import
+import kr.co.cerberus.feature.weakness.WeaknessSolution;
 import kr.co.cerberus.feature.weakness.repository.WeaknessSolutionRepository;
 import kr.co.cerberus.global.jsonb.FileInfo;
 import kr.co.cerberus.global.jsonb.TodoFileData;
@@ -32,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -48,7 +47,9 @@ public class InitialDataLoader implements CommandLineRunner {
     private final FeedbackRepository feedbackRepository;
     private final QnaRepository qnaRepository;
     private final WeeklyReportRepository weeklyReportRepository;
-    private final WeaknessSolutionRepository weaknessSolutionRepository;    private static final LocalDate START_DATE = LocalDate.of(2026, 2, 1);
+    private final WeaknessSolutionRepository weaknessSolutionRepository;
+
+    private static final LocalDate START_DATE = LocalDate.of(2026, 2, 1);
     private static final LocalDate TODAY = LocalDate.now();
 
     @Override
@@ -118,7 +119,6 @@ public class InitialDataLoader implements CommandLineRunner {
     private List<Solution> createSolutions(Long mentorId) {
         List<Solution> solutions = new ArrayList<>();
         String[] subjects = {"국어", "영어", "수학"};
-        Random random = new Random();
 
         for (String subject : subjects) {
             for (int i = 1; i <= 5; i++) {
@@ -147,20 +147,24 @@ public class InitialDataLoader implements CommandLineRunner {
 
         for (int i = 1; i <= 15; i++) { // 각 멘티에게 15개씩 과제 부여
             LocalDate todoDate = START_DATE.plusDays(random.nextInt(TODAY.getDayOfYear() - START_DATE.getDayOfYear() + 1));
-            AssignmentStatus status;
             String todoCompleteYn = "N";
+            String todoAssignYn = "N";
+            String todoDraftCompleteYn = "N";
             List<FileInfo> todoFiles = new ArrayList<>();
             Long solutionId = null;
             String subject = subjects[random.nextInt(subjects.length)];
 
-            if (i % 3 == 0) { // 3의 배수는 완료
-                status = AssignmentStatus.COMPLETED;
+            if (i % 3 == 0) { // 완료 상태
                 todoCompleteYn = "Y";
+                todoAssignYn = "Y";
+                todoDraftCompleteYn = "Y";
                 todoFiles.add(createFileInfo("verification_" + menteeId + "_" + i + ".jpg", "/verifications/" + menteeId + "/" + i + ".jpg", "인증 사진"));
-            } else if (i % 3 == 1) { // 3으로 나눈 나머지가 1은 진행중
-                status = AssignmentStatus.IN_PROGRESS;
-            } else { // 나머지는 임시저장
-                status = AssignmentStatus.DRAFT;
+            } else if (i % 3 == 1) { // 할당된 상태 (진행중)
+                todoAssignYn = "Y";
+                todoDraftCompleteYn = "Y";
+            } else { // 임시저장 상태
+                todoAssignYn = "N";
+                todoDraftCompleteYn = "N";
             }
 
             // Solution과 연결 (랜덤하게)
@@ -175,13 +179,13 @@ public class InitialDataLoader implements CommandLineRunner {
                     .goalId(1L + random.nextInt(3)) // 가상의 목표 ID
                     .solutionId(solutionId)
                     .todoDate(todoDate)
-                    .todoName(subject + " 과제 " + i + " (" + status.getDescription() + ")")
+                    .todoName(subject + " 과제 " + i)
                     .todoNote(subject + " 과제 내용 " + i + "입니다.")
                     .todoFile(JsonbUtils.toJson(todoFileData))
                     .todoSubjects(subject)
-                    .todoAssignYn("Y") // 과제는 항상 'Y'
+                    .todoAssignYn(todoAssignYn)
                     .todoCompleteYn(todoCompleteYn)
-                    .status(status)
+                    .todoDraftCompleteYn(todoDraftCompleteYn)
                     .build();
             todos.add(todoRepository.save(todo));
         }
@@ -193,16 +197,16 @@ public class InitialDataLoader implements CommandLineRunner {
         Random random = new Random();
         int feedbackCount = 0;
         for (Todo todo : menteeTodos) {
-            if (todo.getStatus() == AssignmentStatus.COMPLETED && random.nextBoolean()) { // 완료된 과제 중 절반 정도만 피드백
+            if ("Y".equals(todo.getTodoCompleteYn()) && random.nextBoolean()) { // 완료된 과제 중 절반 정도만 피드백
                 FeedbackStatus status = random.nextBoolean() ? FeedbackStatus.COMPLETED : FeedbackStatus.DRAFT;
                 List<FileInfo> feedbackFiles = List.of(
                         createFileInfo("feedback_" + todo.getId() + "_file.pdf", "/feedbacks/" + todo.getId() + "/file.pdf", "피드백 첨부 자료")
                 );
                 String feedbackContent = "멘토 피드백 내용: " + todo.getTodoName() + "에 대한 상세 피드백입니다. (" + status.getDescription() + ")";
-                String feedbackSummary = "풀이과정을 자세히 쓰기 (" + todo.getTodoName() + ")"; // Add summary
+                String feedbackSummary = "풀이과정을 자세히 쓰기 (" + todo.getTodoName() + ")";
                 FeedbackFileData feedbackData = new FeedbackFileData(
                         feedbackContent,
-                        feedbackSummary, // Pass summary
+                        feedbackSummary,
                         feedbackFiles
                 );
                 Feedback feedback = Feedback.builder()
@@ -232,13 +236,12 @@ public class InitialDataLoader implements CommandLineRunner {
                     .qnaFile(JsonbUtils.toJson(qnaFiles))
                     .status(QnaStatus.PENDING)
                     .build();
-            Qna savedQna = qnaRepository.save(qna); // Assign to savedQna
+            Qna savedQna = qnaRepository.save(qna);
 
-            // 답변 추가 (랜덤하게 답변되도록 설정)
             if (random.nextBoolean()) {
                 savedQna.updateAnswer("멘토가 답변합니다: " + i + "번째 질문에 대한 답변입니다.");
                 savedQna.updateStatus(QnaStatus.ANSWERED);
-                qnaRepository.save(savedQna); // 최종 상태로 한 번만 저장
+                qnaRepository.save(savedQna);
             }
 
             System.out.println("[InitialData] Q&A " + i + "개 생성 완료 (멘티:" + menteeId + ").");
@@ -246,7 +249,6 @@ public class InitialDataLoader implements CommandLineRunner {
     }
 
     private void createWeeklyReports(Long mentorId, Long menteeId, LocalDate reportStartDate) {
-        // 지난주 월요일 (2026-02-02) 기준 리포트
         List<FileInfo> reportFiles = List.of(createFileInfo("weekly_report_" + menteeId + ".pdf", "/reports/" + menteeId + "/weekly_report.pdf", "주간 요약 파일"));
         WeeklyReport report = WeeklyReport.builder()
                 .menteeId(menteeId)
@@ -269,7 +271,7 @@ public class InitialDataLoader implements CommandLineRunner {
     private void createWeaknessSolutions(Long mentorId, Long menteeId) {
         Random random = new Random();
         String[] subjects = {"국어", "영어", "수학"};
-        for (int i = 1; i <= 3; i++) { // 각 멘티에게 3개씩 약점 솔루션 부여
+        for (int i = 1; i <= 3; i++) {
             String subject = subjects[random.nextInt(subjects.length)];
             List<FileInfo> files = List.of(
                     createFileInfo("weakness_solution_" + menteeId + "_" + i + "_file1.pdf", "/weakness_solutions/" + menteeId + "/" + i + "/file1.pdf", "약점 분석 자료"),
@@ -285,6 +287,6 @@ public class InitialDataLoader implements CommandLineRunner {
                     .build();
             weaknessSolutionRepository.save(weaknessSolution);
         }
-        System.out.println("[InitialData] 멘티(" + menteeId + ") 약점 솔루션 " + 3 + "개 생성 완료.");
+        System.out.println("[InitialData] 멘티(" + menteeId + ") 약점 솔루션 3개 생성 완료.");
     }
 }

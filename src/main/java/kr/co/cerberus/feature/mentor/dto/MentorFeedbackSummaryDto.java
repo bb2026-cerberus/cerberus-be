@@ -7,7 +7,7 @@ import java.time.LocalDate;
 public record MentorFeedbackSummaryDto(
     Long feedbackId,
     Long menteeId,
-    String menteeName, // 멘티 이름 추가 (가정)
+    String menteeName,
     Long todoId,
     LocalDate feedDate,
     FeedbackStatus status

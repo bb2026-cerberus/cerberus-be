@@ -1,6 +1,5 @@
 package kr.co.cerberus.feature.mentor.service;
 
-import kr.co.cerberus.feature.assignment.domain.AssignmentStatus;
 import kr.co.cerberus.feature.feedback.domain.FeedbackStatus;
 import kr.co.cerberus.feature.member.repository.MemberRepository;
 import kr.co.cerberus.feature.mentor.dto.DraftCountResponseDto;
@@ -55,10 +54,10 @@ public class MentorService {
         LocalDateTime startOfDay = date.atStartOfDay();
         LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
 
-        // 1. 과제 요약
-        List<MentorAssignmentSummaryDto> assignmentSummaries = todoRepository.findByMenteeIdInAndStatusInAndTodoDateBetweenAndActivateYn(
+        // 1. 과제 요약 - 할당된 과제(assignYn='Y')만 조회
+        List<MentorAssignmentSummaryDto> assignmentSummaries = todoRepository.findByMenteeIdInAndTodoAssignYnAndTodoDateBetweenAndActivateYn(
                         menteeIds,
-                        Arrays.asList(AssignmentStatus.ASSIGNED, AssignmentStatus.IN_PROGRESS),
+                        "Y",
                         date,
                         date, // 해당 날짜의 과제만 조회
                         "Y")
@@ -69,19 +68,14 @@ public class MentorService {
                         menteeNames.getOrDefault(todo.getMenteeId(), "알 수 없는 멘티"),
                         todo.getTodoName(),
                         todo.getTodoDate(),
-                        todo.getStatus()
+                        determineStatus(todo)
                 ))
                 .collect(Collectors.toList());
 
         // 2. 피드백 요약
-        // TODO: feedbackRepository.findByMentorIdAndStatusInAndCreateDatetimeBetweenAndActivateYn 메서드는 feedDate가 아닌 createDatetime으로 조회하는 문제.
-        // 요구사항이 '날짜 기반 조회: 피드백 리스트' 이므로 feedDate를 기준으로 조회해야 함.
-        // 현재 피드백 엔티티에 feedDate가 LocalDate 타입으로 있어서 BETWEEN 쿼리가 힘듦.
-        // 피드백 생성 일자(createDatetime) 또는 feedDate가 LocalDate가 아닌 LocalDateTime으로 변경 필요.
-        // 일단은 createDatetime 기준으로 조회
         List<MentorFeedbackSummaryDto> feedbackSummaries = feedbackRepository.findByMentorIdAndStatusInAndCreateDatetimeBetweenAndActivateYn(
                         mentorId,
-                        Arrays.asList(FeedbackStatus.PENDING), // 피드백 대기중인 것만 조회
+                        List.of(FeedbackStatus.PENDING),
                         startOfDay,
                         endOfDay,
                         "Y")
@@ -91,7 +85,7 @@ public class MentorService {
                         feedback.getMenteeId(),
                         menteeNames.getOrDefault(feedback.getMenteeId(), "알 수 없는 멘티"),
                         feedback.getTodoId(),
-                        feedback.getFeedDate(), // feedDate는 멘티 API 호환을 위해 유지
+                        feedback.getFeedDate(),
                         feedback.getStatus()
                 ))
                 .collect(Collectors.toList());
@@ -116,14 +110,22 @@ public class MentorService {
         return new MentorHomeResponseDto(assignmentSummaries, feedbackSummaries, qnaSummaries);
     }
 
+    private String determineStatus(Todo todo) {
+        if ("Y".equals(todo.getTodoCompleteYn())) return "COMPLETED";
+        if ("Y".equals(todo.getTodoAssignYn())) return "ASSIGNED";
+        if ("N".equals(todo.getTodoDraftCompleteYn())) return "DRAFT";
+        return "IN_PROGRESS";
+    }
+
     // 임시저장 개수 조회 (Redis 캐싱 제거)
     public DraftCountResponseDto getDraftCounts(Long mentorId) {
         // Redis 캐싱을 사용하지 않으므로 캐시 관련 로직 제거
         log.debug("Draft count calculated directly from DB for mentorId: {}", mentorId);
         List<Long> menteeIds = getMenteeIdsByMentorId(mentorId);
 
-        long assignmentDraftCount = todoRepository.countByMenteeIdInAndStatusAndActivateYn(
-                menteeIds, AssignmentStatus.DRAFT, "Y");
+        // 임시저장은 assignYn='N' 인 상태로 조회
+        long assignmentDraftCount = todoRepository.countByMenteeIdInAndTodoAssignYnAndActivateYn(
+                menteeIds, "N", "Y");
         long feedbackDraftCount = feedbackRepository.countByMentorIdAndStatusAndActivateYn(
                 mentorId, FeedbackStatus.DRAFT, "Y");
 
@@ -148,7 +150,7 @@ public class MentorService {
 
         long totalTodos = todos.size();
         long completedTodos = todos.stream()
-                .filter(todo -> todo.getStatus() == AssignmentStatus.COMPLETED)
+                .filter(todo -> "Y".equals(todo.getTodoCompleteYn()))
                 .count();
 
         double overallProgress = (totalTodos > 0) ? (double) completedTodos / totalTodos * 100 : 0.0;
@@ -169,7 +171,7 @@ public class MentorService {
 
             // 해당 과목 중 완료된 할 일만 필터링하여 개수를 얻음
             long completedSubjectTodos = totalSubjectTodosList.stream()
-                    .filter(todo -> todo.getStatus() == AssignmentStatus.COMPLETED)
+                    .filter(todo -> "Y".equals(todo.getTodoCompleteYn()))
                     .count();
             double subjectProgress = (totalSubjectTodos > 0) ? (double) completedSubjectTodos / totalSubjectTodos * 100 : 0.0;
             subjectProgressList.add(new SubjectProgressDto(subject, subjectProgress));

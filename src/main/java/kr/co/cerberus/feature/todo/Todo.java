@@ -1,7 +1,6 @@
 package kr.co.cerberus.feature.todo;
 
 import jakarta.persistence.*;
-import kr.co.cerberus.feature.assignment.domain.AssignmentStatus;
 import kr.co.cerberus.global.entity.BaseEntity;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -60,11 +59,9 @@ public class Todo extends BaseEntity {
 	@Column(name = "todo_complete_yn", columnDefinition = "bpchar(1) default 'N'", nullable = false)
 	private String todoCompleteYn = "N";
 
-	// 신규 추가: 과제 상태 (임시저장, 할당됨, 진행중, 완료, 취소됨)
 	@Builder.Default
-	@Enumerated(EnumType.STRING)
-	@Column(name = "status", columnDefinition = "varchar(20) default 'DRAFT'", nullable = false)
-	private AssignmentStatus status = AssignmentStatus.DRAFT;
+	@Column(name = "todo_draft_complete_yn", columnDefinition = "bpchar(1) default 'N'", nullable = false)
+	private String todoDraftCompleteYn = "N";
 
 	@Column(name = "todo_start_dt")
 	private LocalDateTime todoStartDt;
@@ -74,13 +71,11 @@ public class Todo extends BaseEntity {
 
 	public void toggleComplete() {
 		this.todoCompleteYn = "Y".equals(this.todoCompleteYn) ? "N" : "Y";
-		// 기존 로직 유지하며 상태도 업데이트
-		this.status = "Y".equals(this.todoCompleteYn) ? AssignmentStatus.COMPLETED : AssignmentStatus.IN_PROGRESS;
 	}
 
 	public void markComplete() {
 		this.todoCompleteYn = "Y";
-		this.status = AssignmentStatus.COMPLETED;
+		this.todoDraftCompleteYn = "Y";
 	}
 
 	public void updateTodoFile(String todoFile) {
@@ -89,21 +84,17 @@ public class Todo extends BaseEntity {
 
 	public void markIncomplete() {
 		this.todoCompleteYn = "N";
-		this.status = AssignmentStatus.IN_PROGRESS;
 	}
-	
-	// 과제 상태 업데이트
-    public void updateStatus(AssignmentStatus newStatus) {
-        this.status = newStatus;
-    }
 
 	// 임시저장 상태로 설정
 	public void markAsDraft() {
-		this.status = AssignmentStatus.DRAFT;
+		this.todoDraftCompleteYn = "N";
+		this.todoAssignYn = "N";
 	}
 
 	// 과제 할당 상태로 설정
 	public void assign() {
-		this.status = AssignmentStatus.ASSIGNED;
+		this.todoAssignYn = "Y";
+		this.todoDraftCompleteYn = "Y";
 	}
 }
