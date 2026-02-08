@@ -12,6 +12,7 @@ public enum ErrorCode {
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "요청한 리소스를 찾을 수 없습니다."),
 	METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "지원하지 않는 HTTP Method입니다."),
 	INVALID_INPUT_VALUE(HttpStatus.BAD_REQUEST, "입력값이 올바르지 않습니다."),
+	RELATION_ACCESS_DENIED(HttpStatus.BAD_REQUEST, "해당 멘티에 대한 접근 권한이 없습니다."),
 	// 이외 커스텀 에러 코드 추가 ...
 	LOCAL_LOGIN_FAIL(HttpStatus.BAD_REQUEST, "로그인 실패! 이메일이나 비밀번호를 확인해주세요."),
 	    OAUTH2_LOGIN_FAIL(HttpStatus.BAD_REQUEST, "소셜 로그인에 실패했습니다."),

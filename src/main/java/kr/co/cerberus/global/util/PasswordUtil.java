@@ -1,7 +1,16 @@
 package kr.co.cerberus.global.util;
 
+import lombok.experimental.UtilityClass;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
+import java.util.Base64;
+
 import java.util.Random;
 
+@UtilityClass
 public class PasswordUtil {
 
     public static String generateRandomPassword() {
@@ -25,5 +34,30 @@ public class PasswordUtil {
         }
         System.out.println(password);
         return password.toString();
+    }
+
+    private static final int ITERATIONS = 65536;
+    private static final int KEY_LENGTH = 256;
+    private static final String ALGORITHM = "PBKDF2WithHmacSHA256";
+
+    public static byte[] generateSalt() {
+        SecureRandom random = new SecureRandom();
+        byte[] salt = new byte[16];
+        random.nextBytes(salt);
+        return salt;
+    }
+
+    public static String encode(String password) {
+        char[] passwordChars = password.toCharArray();
+        byte[] salt = generateSalt();
+        PBEKeySpec spec = new PBEKeySpec(passwordChars, salt, ITERATIONS, KEY_LENGTH);
+
+        try {
+            SecretKeyFactory skf = SecretKeyFactory.getInstance(ALGORITHM);
+            byte[] hash = skf.generateSecret(spec).getEncoded();
+            return Base64.getEncoder().encodeToString(hash);
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            throw new RuntimeException("암호화 중 오류 발생", e);
+        }
     }
 }

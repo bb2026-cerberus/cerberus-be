@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -27,6 +29,7 @@ public class Goal {
 	@Column(name = "goal_name")
 	private String goalName;
 
+	@JdbcTypeCode(SqlTypes.JSON)
 	@Column(name = "goal_file", columnDefinition = "jsonb")
 	private String goalFile;
 

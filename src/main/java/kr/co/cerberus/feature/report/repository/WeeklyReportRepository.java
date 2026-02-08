@@ -1,0 +1,11 @@
+package kr.co.cerberus.feature.report.repository;
+
+import kr.co.cerberus.feature.report.WeeklyReport;
+import org.springframework.data.jpa.repository.JpaRepository;
+import java.time.LocalDate;
+import java.util.List;
+
+public interface WeeklyReportRepository extends JpaRepository<WeeklyReport, Long> {
+    List<WeeklyReport> findByMentorIdAndMenteeIdAndReportDateBetweenAndActivateYn(Long mentorId, Long menteeId, LocalDate startDate, LocalDate endDate, String activateYn);
+    List<WeeklyReport> findByMenteeIdAndActivateYn(Long menteeId, String activateYn);
+}

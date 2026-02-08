@@ -1,29 +1,28 @@
 package kr.co.cerberus.feature.relation;
 
 import jakarta.persistence.*;
-import lombok.*;
+import kr.co.cerberus.global.entity.BaseEntity;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @Entity
-@Builder
-@NoArgsConstructor(access = AccessLevel.PROTECTED)
+@SuperBuilder(toBuilder = true)
+@NoArgsConstructor
 @AllArgsConstructor
 @Table(schema = "master", name = "tb_relation")
-public class Relation {
+public class Relation extends BaseEntity {
 
-	@Id
-	@GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "rel_seq_generator")
-	@SequenceGenerator(
-			name = "rel_seq_generator",
-			sequenceName = "master.tb_relation_rel_seq_seq",
-			allocationSize = 1
-	)
-	@Column(name = "relation_seq")
-	private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "relation_seq")
+    private Long id;
 
-	@Column(name = "mentor_seq")
-	private Long mentorSeq;
+    @Column(name = "mentor_seq", nullable = false)
+    private Long mentorId;
 
-	@Column(name = "mentee_seq")
-	private Long menteeSeq;
+    @Column(name = "mentee_seq", nullable = false)
+    private Long menteeId;
 }

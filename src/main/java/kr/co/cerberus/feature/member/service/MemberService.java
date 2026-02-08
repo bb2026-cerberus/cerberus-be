@@ -39,7 +39,7 @@ public class MemberService {
 
     public void delete(Long id) {
         Member member = findById(id);
-        member.deleteMember();
+        member.delete();
     }
 
     public MemberListResponseDto findAll() {

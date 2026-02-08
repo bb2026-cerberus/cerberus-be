@@ -31,16 +31,4 @@ public class Member extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "mem_role", length = 30)
     private Role role;
-
-    @Builder.Default
-    @Column(name = "delete_yn", columnDefinition = "bpchar(1)")
-    private String deleteYn = "N";
-
-    @Builder.Default
-    @Column(name = "activate_yn", columnDefinition = "bpchar(1)")
-    private String activateYn = "Y";
-
-    public void deleteMember() {
-        this.deleteYn = "Y";
-    }
 }

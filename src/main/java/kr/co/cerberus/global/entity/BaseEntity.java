@@ -8,6 +8,7 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import lombok.Builder; // Add Builder import for @Builder.Default
 
 import java.time.LocalDateTime;
 
@@ -24,4 +25,24 @@ public abstract class BaseEntity {
     @UpdateTimestamp
     @Column(name = "update_dt", nullable = false)
     private LocalDateTime updateDatetime;       // 마지막 수정 시간
+
+    @Builder.Default
+    @Column(name = "delete_yn", nullable = false, length = 1)
+    private String deleteYn = "N";
+
+    @Builder.Default
+    @Column(name = "activate_yn", nullable = false, length = 1)
+    private String activateYn = "N";
+
+    public void delete() {
+        this.deleteYn = "Y";
+    }
+
+    public void undelete() {
+        this.deleteYn = "N";
+    }
+
+    public boolean isDeleted() {
+        return "Y".equals(this.deleteYn);
+    }
 }
