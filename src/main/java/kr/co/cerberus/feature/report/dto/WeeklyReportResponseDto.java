@@ -1,10 +1,12 @@
 package kr.co.cerberus.feature.report.dto;
 
+import lombok.Builder;
 import kr.co.cerberus.global.jsonb.FileInfo;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Builder
 public record WeeklyReportResponseDto(
     Long id,
     Long menteeId,

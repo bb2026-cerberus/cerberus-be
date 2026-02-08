@@ -101,7 +101,7 @@ public class InitialDataLoader implements CommandLineRunner {
     }
 
     private void createRelationIfNotFound(Long mentorId, Long menteeId) {
-        boolean exists = relationRepository.findByMentorIdAndActivateYn(mentorId, "Y")
+        boolean exists = relationRepository.findByMentorId(mentorId)
                 .stream().anyMatch(r -> r.getMenteeId().equals(menteeId));
         if (!exists) {
             Relation relation = Relation.builder()

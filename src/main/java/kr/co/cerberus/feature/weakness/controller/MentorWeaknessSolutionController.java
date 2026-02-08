@@ -12,6 +12,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.http.MediaType;
+import org.springframework.web.multipart.MultipartFile;
+
 import jakarta.validation.Valid;
 import java.util.List;
 
@@ -24,21 +27,22 @@ public class MentorWeaknessSolutionController {
     private final WeaknessSolutionService weaknessSolutionService;
 
     @Operation(summary = "약점 솔루션 생성", description = "멘토가 멘티에 대한 약점 맞춤 솔루션을 생성합니다.")
-    @PostMapping("/{mentorId}")
+    @PostMapping(value = "/{mentorId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CommonResponse<WeaknessSolutionResponseDto>> createWeaknessSolution(
             @PathVariable Long mentorId,
-            @Valid @RequestBody WeaknessSolutionCreateRequestDto requestDto) {
-        WeaknessSolutionResponseDto response = weaknessSolutionService.createWeaknessSolution(mentorId, requestDto);
+            @Valid @RequestPart("request") WeaknessSolutionCreateRequestDto requestDto,
+            @RequestPart(value = "file", required = false) MultipartFile file) {
+        WeaknessSolutionResponseDto response = weaknessSolutionService.createWeaknessSolution(mentorId, requestDto, file);
         return ResponseEntity.status(HttpStatus.CREATED).body(CommonResponse.of(response));
     }
 
     @Operation(summary = "약점 솔루션 수정", description = "멘토가 등록된 약점 맞춤 솔루션을 수정합니다.")
-    @PutMapping("/{mentorId}/{weaknessSolutionId}")
+    @PutMapping(value = "/{mentorId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<CommonResponse<WeaknessSolutionResponseDto>> updateWeaknessSolution(
             @PathVariable Long mentorId,
-            @PathVariable Long weaknessSolutionId,
-            @Valid @RequestBody WeaknessSolutionUpdateRequestDto requestDto) {
-        WeaknessSolutionResponseDto response = weaknessSolutionService.updateWeaknessSolution(mentorId, requestDto);
+            @Valid @RequestPart("request") WeaknessSolutionUpdateRequestDto requestDto,
+            @RequestPart(value = "files", required = false) List<MultipartFile> files) {
+        WeaknessSolutionResponseDto response = weaknessSolutionService.updateWeaknessSolution(mentorId, requestDto, files);
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 
@@ -51,27 +55,12 @@ public class MentorWeaknessSolutionController {
         return ResponseEntity.ok(CommonResponse.of(null));
     }
 
-    @Operation(summary = "약점 솔루션 상세 조회", description = "특정 약점 맞춤 솔루션의 상세 정보를 조회합니다.")
-    @GetMapping("/{weaknessSolutionId}")
-    public ResponseEntity<CommonResponse<WeaknessSolutionResponseDto>> getWeaknessSolutionDetail(@PathVariable Long weaknessSolutionId) {
-        WeaknessSolutionResponseDto response = weaknessSolutionService.getWeaknessSolutionDetail(weaknessSolutionId);
-        return ResponseEntity.ok(CommonResponse.of(response));
-    }
-
-    @Operation(summary = "멘토가 특정 멘티의 약점 솔루션 목록 조회", description = "멘토가 관리하는 특정 멘티의 약점 맞춤 솔루션 목록을 조회합니다.")
-    @GetMapping("/by-mentor/{mentorId}/mentees/{menteeId}")
-    public ResponseEntity<CommonResponse<List<WeaknessSolutionResponseDto>>> getWeaknessSolutionsByMentorAndMentee(
+    @Operation(summary = "멘토의 약점 솔루션 목록 조회", description = "멘토가 관리하는 특정 멘티의 솔루션 목록을 조회하거나, menteeId가 없으면 멘토가 등록한 모든 솔루션을 조회합니다.")
+    @GetMapping("/by-mentor/{mentorId}")
+    public ResponseEntity<CommonResponse<List<WeaknessSolutionResponseDto>>> getWeaknessSolutionsByMentor(
             @PathVariable Long mentorId,
-            @PathVariable Long menteeId) {
+            @RequestParam(value = "menteeId", required = false) Long menteeId) {
         List<WeaknessSolutionResponseDto> response = weaknessSolutionService.getWeaknessSolutionsByMentorAndMentee(mentorId, menteeId);
-        return ResponseEntity.ok(CommonResponse.of(response));
-    }
-
-    @Operation(summary = "멘티가 자신의 약점 솔루션 목록 조회 (멘티용)", description = "멘티가 자신의 약점 맞춤 솔루션 목록을 조회합니다.")
-    @GetMapping("/by-mentee/{menteeId}")
-    public ResponseEntity<CommonResponse<List<WeaknessSolutionResponseDto>>> getWeaknessSolutionsByMentee(
-            @PathVariable Long menteeId) {
-        List<WeaknessSolutionResponseDto> response = weaknessSolutionService.getWeaknessSolutionsByMentee(menteeId);
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 }

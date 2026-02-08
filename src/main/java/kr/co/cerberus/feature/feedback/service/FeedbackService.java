@@ -10,7 +10,6 @@ import kr.co.cerberus.global.util.JsonbUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -94,8 +93,6 @@ public class FeedbackService {
 
 		if (contents.isEmpty()) return null;
 
-		// 개별 피드백들을 합쳐서 주간 요약으로 반환
-		// 추후 AI 요약 등으로 고도화 가능
 		return String.join(" ", contents);
 	}
 }

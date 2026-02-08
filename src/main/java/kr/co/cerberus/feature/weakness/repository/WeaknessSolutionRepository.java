@@ -5,6 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface WeaknessSolutionRepository extends JpaRepository<WeaknessSolution, Long> {
-    List<WeaknessSolution> findByMentorIdAndMenteeIdAndActivateYn(Long mentorId, Long menteeId, String activateYn);
-    List<WeaknessSolution> findByMenteeIdAndActivateYn(Long menteeId, String activateYn);
+    List<WeaknessSolution> findByMentorIdAndMenteeId(Long mentorId, Long menteeId);
+    List<WeaknessSolution> findByMentorId(Long mentorId);
 }

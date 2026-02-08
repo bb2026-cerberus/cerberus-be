@@ -27,12 +27,16 @@ configurations {
 
 repositories {
     mavenCentral()
+    // maven { url 'https://repo.spring.io/milestone' }
 }
 
 dependencies {
     // Spring Web
     implementation 'org.springframework.boot:spring-boot-starter-web'
 
+    // Spring AI
+    // implementation 'org.springframework.ai:spring-ai-openai-spring-boot-starter:1.0.0-M5'
+    
     // Lombok / Logger (log4j2)
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
     annotationProcessor 'org.projectlombok:lombok'
@@ -49,22 +53,17 @@ dependencies {
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 
-    // Swagger UI (SpringDoc)
+    // Swagger UI (SpringDoc) - 사용자가 사용하던 2.8.13 유지
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13'
 
     // Spring Security
 //    implementation 'org.springframework.boot:spring-boot-starter-security'
 //    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
 
-    // JWT 라이브러리 : Fluent API를 사용하고 있음, Nimbus를 사용하여 JWE를 사용할만큼 보안증 증가시키기엔 복잡도가 너무 올라갈 것 같아서 선택
+    // JWT 라이브러리
 //    implementation 'io.jsonwebtoken:jjwt-api:0.13.0'
 //    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0'
 //    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0'
-
-    // DB (Example)
-//    runtimeOnly 'com.h2database:h2'
-
-//    developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
 }
 
 tasks.named('test') {

@@ -5,7 +5,6 @@ import kr.co.cerberus.feature.solution.dto.SolutionCreateRequestDto;
 import kr.co.cerberus.feature.solution.dto.SolutionResponseDto;
 import kr.co.cerberus.feature.solution.dto.SolutionUpdateRequestDto;
 import kr.co.cerberus.feature.solution.repository.SolutionRepository;
-import kr.co.cerberus.feature.todo.dto.TodoDetailResponseDto;
 import kr.co.cerberus.global.error.CustomException;
 import kr.co.cerberus.global.error.ErrorCode;
 import kr.co.cerberus.global.jsonb.FileInfo;
@@ -16,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import com.fasterxml.jackson.core.type.TypeReference; // Import TypeReference
+import com.fasterxml.jackson.core.type.TypeReference;
 
 @Service
 @RequiredArgsConstructor
@@ -28,8 +27,6 @@ public class SolutionService {
     // 솔루션 생성
     @Transactional
     public SolutionResponseDto createSolution(SolutionCreateRequestDto requestDto) {
-        // TODO: 멘토 ID 유효성 검증 (memberRepository를 통해 실제로 존재하는 멘토인지 확인)
-        // TODO: 보안 - 현재 로그인한 사용자의 ID가 requestDto.mentorId()와 일치하는지 검증 로직 추가
         Solution solution = Solution.builder()
                 .mentorId(requestDto.mentorId())
                 .title(requestDto.title())
@@ -47,7 +44,6 @@ public class SolutionService {
         Solution solution = solutionRepository.findById(requestDto.solutionId())
                 .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
-        // 요청하는 멘토가 해당 솔루션의 소유자인지 확인
         if (!Objects.equals(solution.getMentorId(), mentorId)) {
             throw new CustomException(ErrorCode.ACCESS_DENIED, "해당 솔루션을 수정할 권한이 없습니다.");
         }
@@ -67,12 +63,11 @@ public class SolutionService {
         Solution solution = solutionRepository.findById(solutionId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
-        // 요청하는 멘토가 해당 솔루션의 소유자인지 확인
         if (!Objects.equals(solution.getMentorId(), mentorId)) {
-            throw new CustomException(ErrorCode.ACCESS_DENIED, "해당 솔루션을 삭제할 권한이 없습니다.");
+            throw new CustomException(ErrorCode.ACCESS_DENIED, "해당 약점 솔루션을 삭제할 권한이 없습니다.");
         }
 
-        solution.delete(); // BaseEntity의 delete() 메서드 활용
+        solution.delete();
     }
 
     // 솔루션 상세 조회
@@ -84,7 +79,7 @@ public class SolutionService {
 
     // 멘토별 솔루션 목록 조회
     public List<SolutionResponseDto> getSolutionsByMentor(Long mentorId) {
-        List<Solution> solutions = solutionRepository.findByMentorIdAndActivateYn(mentorId, "Y");
+        List<Solution> solutions = solutionRepository.findByMentorId(mentorId);
         return solutions.stream()
                 .map(this::mapToResponseDto)
                 .collect(Collectors.toList());
@@ -92,7 +87,7 @@ public class SolutionService {
 
     // 멘토별 솔루션 검색 (제목 기준)
     public List<SolutionResponseDto> searchSolutionsByTitle(Long mentorId, String title) {
-        List<Solution> solutions = solutionRepository.findByMentorIdAndTitleContainingIgnoreCaseAndActivateYn(mentorId, title, "Y");
+        List<Solution> solutions = solutionRepository.findByMentorIdAndTitleContainingIgnoreCase(mentorId, title);
         return solutions.stream()
                 .map(this::mapToResponseDto)
                 .collect(Collectors.toList());
@@ -118,7 +113,7 @@ public class SolutionService {
 
     public String getSolutionTitleById(Long solutionId) {
         if (solutionId == null) return null;
-        return solutionRepository.findByIdAndDeleteYn(solutionId, "N")
+        return solutionRepository.findById(solutionId)
                 .map(Solution::getTitle)
                 .orElse(null);
     }
@@ -126,8 +121,7 @@ public class SolutionService {
     public List<FileInfo> parseSolutionFiles(Long solutionId) {
         if (solutionId == null) return Collections.emptyList();
 
-        // solution의 solutionFile JSONB 파싱
-        return solutionRepository.findByIdAndDeleteYn(solutionId, "N")
+        return solutionRepository.findById(solutionId)
                 .map(solution -> {
                     List<FileInfo> files = JsonbUtils.fromJson(
                             solution.getSolutionFile(), new TypeReference<List<FileInfo>>() {});

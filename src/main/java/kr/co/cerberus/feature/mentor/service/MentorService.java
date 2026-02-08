@@ -57,12 +57,11 @@ public class MentorService {
         LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
 
         // 1. 과제 요약 - 할당된 과제(assignYn='Y')만 조회
-        List<MentorAssignmentSummaryDto> assignmentSummaries = todoRepository.findByMenteeIdInAndTodoAssignYnAndTodoDateBetweenAndActivateYn(
+        List<MentorAssignmentSummaryDto> assignmentSummaries = todoRepository.findByMenteeIdInAndTodoAssignYnAndTodoDateBetween(
                         menteeIds,
                         "Y",
                         date,
-                        date, // 해당 날짜의 과제만 조회
-                        "Y")
+                        date)
                 .stream()
                 .map(todo -> new MentorAssignmentSummaryDto(
                         todo.getId(),
@@ -75,12 +74,11 @@ public class MentorService {
                 .collect(Collectors.toList());
 
         // 2. 피드백 요약 - 완료되지 않은(feedCompleteYn='N') 피드백 조회
-        List<MentorFeedbackSummaryDto> feedbackSummaries = feedbackRepository.findByMentorIdAndFeedCompleteYnAndCreateDatetimeBetweenAndActivateYn(
+        List<MentorFeedbackSummaryDto> feedbackSummaries = feedbackRepository.findByMentorIdAndFeedCompleteYnAndCreateDatetimeBetween(
                         mentorId,
                         "N",
                         startOfDay,
-                        endOfDay,
-                        "Y")
+                        endOfDay)
                 .stream()
                 .map(feedback -> new MentorFeedbackSummaryDto(
                         feedback.getId(),
@@ -93,11 +91,10 @@ public class MentorService {
                 .collect(Collectors.toList());
 
         // 3. Q&A 요약
-        List<MentorQnaSummaryDto> qnaSummaries = qnaRepository.findByMentorIdAndCreateDatetimeBetweenAndActivateYn(
+        List<MentorQnaSummaryDto> qnaSummaries = qnaRepository.findByMentorIdAndCreateDatetimeBetween(
                         mentorId,
                         startOfDay,
-                        endOfDay,
-                        "Y")
+                        endOfDay)
                 .stream()
                 .map(qna -> new MentorQnaSummaryDto(
                         qna.getId(),
@@ -131,11 +128,11 @@ public class MentorService {
         List<Long> menteeIds = getMenteeIdsByMentorId(mentorId);
 
         // 과제 임시저장: todoDraftYn='N' (할당되지 않음)
-        long assignmentDraftCount = todoRepository.countByMenteeIdInAndTodoAssignYnAndActivateYn(
-                menteeIds, "N", "Y");
+        long assignmentDraftCount = todoRepository.countByMenteeIdInAndTodoAssignYn(
+                menteeIds, "N");
         // 피드백 임시저장: feedDraftYn='Y'
-        long feedbackDraftCount = feedbackRepository.countByMentorIdAndFeedDraftYnAndActivateYn(
-                mentorId, "Y", "Y");
+        long feedbackDraftCount = feedbackRepository.countByMentorIdAndFeedDraftYn(
+                mentorId, "Y");
 
         return new DraftCountResponseDto(assignmentDraftCount, feedbackDraftCount);
     }
@@ -149,7 +146,7 @@ public class MentorService {
         
         Map<Long, String> menteeNames = getMenteeNames(Collections.singletonList(menteeId));
 
-        List<Todo> todos = todoRepository.findByMenteeIdAndActivateYn(menteeId, "Y");
+        List<Todo> todos = todoRepository.findByMenteeId(menteeId);
         if (todos.isEmpty()) {
             return new MenteeProgressResponseDto(menteeId, menteeNames.getOrDefault(menteeId, "알 수 없는 멘티"), 0.0, List.of());
         }
@@ -170,8 +167,8 @@ public class MentorService {
         List<SubjectProgressDto> subjectProgressList = new ArrayList<>();
         for (String subject : subjects) {
             // 해당 과목의 모든 할 일을 조회하여 총 개수를 얻음
-            List<Todo> totalSubjectTodosList = todoRepository.findByMenteeIdAndTodoSubjectsAndActivateYn(
-                    menteeId, subject, "Y"
+            List<Todo> totalSubjectTodosList = todoRepository.findByMenteeIdAndTodoSubjects(
+                    menteeId, subject
             );
             long totalSubjectTodos = totalSubjectTodosList.size();
 
@@ -189,7 +186,7 @@ public class MentorService {
 
     // 멘토가 관리하는 멘티 ID 목록을 가져오는 실제 로직
     private List<Long> getMenteeIdsByMentorId(Long mentorId) {
-        return relationRepository.findByMentorIdAndActivateYn(mentorId, "Y")
+        return relationRepository.findByMentorId(mentorId)
                 .stream()
                 .map(Relation::getMenteeId)
                 .collect(Collectors.toList());
@@ -204,7 +201,7 @@ public class MentorService {
 
     // 멘토가 특정 멘티를 관리하는지 확인하는 헬퍼 메서드
     private boolean isMentorManagingMentee(Long mentorId, Long menteeId) {
-        return relationRepository.findByMentorIdAndActivateYn(mentorId, "Y")
+        return relationRepository.findByMentorId(mentorId)
                 .stream()
                 .anyMatch(relation -> relation.getMenteeId().equals(menteeId));
     }

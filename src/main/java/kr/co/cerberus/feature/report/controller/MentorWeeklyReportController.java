@@ -1,6 +1,7 @@
 package kr.co.cerberus.feature.report.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.co.cerberus.feature.report.dto.WeeklyReportCreateRequestDto;
 import kr.co.cerberus.feature.report.dto.WeeklyReportResponseDto;
@@ -59,22 +60,12 @@ public class MentorWeeklyReportController {
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 
-    @Operation(summary = "멘토가 특정 멘티의 주간 리포트 목록 조회", description = "멘토가 관리하는 특정 멘티의 기간별 주간 리포트 목록을 조회합니다.")
-    @GetMapping("/by-mentor/{mentorId}/mentees/{menteeId}")
-    public ResponseEntity<CommonResponse<List<WeeklyReportResponseDto>>> getWeeklyReportsByMentorAndMentee(
+    @Operation(summary = "멘토가 관리하는 모든 멘티의 주간 리포트 목록 조회", description = "특정 주차(월요일 기준)의 모든 멘티 리포트를 조회합니다. 작성 전인 경우 AI 초안이 포함됩니다.")
+    @GetMapping("/by-mentor/{mentorId}")
+    public ResponseEntity<CommonResponse<List<WeeklyReportResponseDto>>> getWeeklyReportsByMentor(
             @PathVariable Long mentorId,
-            @PathVariable Long menteeId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        List<WeeklyReportResponseDto> response = weeklyReportService.getWeeklyReportsByMentorAndMentee(mentorId, menteeId, startDate, endDate);
-        return ResponseEntity.ok(CommonResponse.of(response));
-    }
-
-    @Operation(summary = "멘티의 주간 리포트 목록 조회 (멘티용)", description = "멘티가 자신의 주간 리포트 목록을 조회합니다.")
-    @GetMapping("/by-mentee/{menteeId}")
-    public ResponseEntity<CommonResponse<List<WeeklyReportResponseDto>>> getWeeklyReportsByMentee(
-            @PathVariable Long menteeId) {
-        List<WeeklyReportResponseDto> response = weeklyReportService.getWeeklyReportsByMentee(menteeId);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate mondayDate) {
+        List<WeeklyReportResponseDto> response = weeklyReportService.getMenteesWeeklyReports(mentorId, mondayDate);
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 }
