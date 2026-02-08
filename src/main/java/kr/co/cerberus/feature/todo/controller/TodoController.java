@@ -103,6 +103,16 @@ public class TodoController {
 		return ResponseEntity.ok(CommonResponse.of(response));
 	}
 
+
+    @Operation(summary = "할일 타이머 세션 추가", description = "Todo에 타이머 세션(시작~종료)을 추가로 저장합니다.")
+    @PostMapping("/{todoId}/timer/sessions")
+    public ResponseEntity<CommonResponse<Void>> addTimerSession(
+            @PathVariable Long todoId,
+            @RequestBody TodoTimerSessionCreateRequestDto request
+    ) {  todoService.addTimerSession(todoId, request);
+        return ResponseEntity.ok(CommonResponse.of(null));
+    }
+
 	@Operation(summary = "할일 인증 사진 수정", description = "기존 인증 사진을 새 사진으로 수정")
 	@PutMapping(value = "/{todoId}/verification", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
 	public ResponseEntity<CommonResponse<VerificationResponseDto>> updateVerification(

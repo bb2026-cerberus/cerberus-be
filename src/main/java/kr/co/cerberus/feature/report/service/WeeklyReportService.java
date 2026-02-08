@@ -1,14 +1,16 @@
 package kr.co.cerberus.feature.report.service;
 
-import kr.co.cerberus.feature.member.Member;
 import kr.co.cerberus.feature.member.Role;
 import kr.co.cerberus.feature.member.repository.MemberRepository;
 import kr.co.cerberus.feature.report.WeeklyReport;
+import kr.co.cerberus.feature.report.dto.WeeklyMenteeReportResponseDto;
 import kr.co.cerberus.feature.report.dto.WeeklyReportCreateRequestDto;
 import kr.co.cerberus.feature.report.dto.WeeklyReportResponseDto;
 import kr.co.cerberus.feature.report.dto.WeeklyReportUpdateRequestDto;
 import kr.co.cerberus.feature.report.repository.WeeklyReportRepository;
 import kr.co.cerberus.feature.relation.repository.RelationRepository;
+import kr.co.cerberus.feature.todo.Todo;
+import kr.co.cerberus.feature.todo.repository.TodoRepository;
 import kr.co.cerberus.global.error.CustomException;
 import kr.co.cerberus.global.error.ErrorCode;
 import kr.co.cerberus.global.util.JsonbUtils;
@@ -17,10 +19,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.fasterxml.jackson.core.type.TypeReference;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.time.temporal.TemporalAdjusters;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,7 +33,7 @@ public class WeeklyReportService {
     private final WeeklyReportRepository weeklyReportRepository;
     private final MemberRepository memberRepository; // 멘티/멘토 유효성 검증용
     private final RelationRepository relationRepository; // 멘토-멘티 관계 검증용
-
+    private final TodoRepository todoRepository;
     // 주간 리포트 생성
     @Transactional
     public WeeklyReportResponseDto createWeeklyReport(Long mentorId, WeeklyReportCreateRequestDto requestDto) {
@@ -110,11 +112,105 @@ public class WeeklyReportService {
     }
 
     // 멘티의 주간 리포트 목록 조회
-    public List<WeeklyReportResponseDto> getWeeklyReportsByMentee(Long menteeId) {
-        List<WeeklyReport> reports = weeklyReportRepository.findByMenteeIdAndActivateYn(menteeId, "Y");
-        return reports.stream()
-                .map(this::mapToResponseDto)
-                .collect(Collectors.toList());
+    public WeeklyMenteeReportResponseDto getWeeklyReportsByMentee(Long menteeId, String yearMonthWeek) {
+//        yearMonthWeek 가 2026021이런식으로 2026년 2월의 1주차를 의미
+        int year = Integer.parseInt(yearMonthWeek.substring(0, 4));
+        int month = Integer.parseInt(yearMonthWeek.substring(4, 6));
+        int week = Integer.parseInt(yearMonthWeek.substring(6, 7));
+
+        LocalDate startDate = LocalDate.of(year, month, 1).with(TemporalAdjusters.firstInMonth(DayOfWeek.MONDAY)).plusWeeks(week - 1);
+        LocalDate endDate = startDate.plusDays(6);
+        System.out.println("startDate: " + startDate + ", endDate: " + endDate);
+        WeeklyReport report = weeklyReportRepository.findByMenteeIdAndReportDateBetween(
+                menteeId, startDate, endDate
+        );
+        System.out.println("report: " + report);
+
+
+        // ✅ 이제 Todo 테이블에서 한 번에 주간 데이터 조회 (deleteYn만 필터)
+        List<Todo> weeklyItems = todoRepository.findByMenteeIdAndTodoDateBetweenAndDeleteYn(
+                menteeId, startDate, endDate, "N"
+        );
+
+        // ✅ todo_assign_yn 기준으로 분리
+        List<Todo> assignments = weeklyItems.stream()
+                .filter(t -> "Y".equals(t.getTodoAssignYn()))  // 과제
+                .toList();
+
+        List<Todo> todos = weeklyItems.stream()
+                .filter(t -> "N".equals(t.getTodoAssignYn()))  // 할일
+                .toList();
+
+        // =========================
+        // 과제 달성률
+        // =========================
+        int totalAssignCount = assignments.size();
+        long completedAssignCount = assignments.stream()
+                .filter(t -> "Y".equals(t.getTodoCompleteYn()))
+                .count();
+
+        int completedAssignPercent = 0;
+        if (totalAssignCount > 0) {
+            completedAssignPercent = (int) Math.round((double) completedAssignCount / totalAssignCount * 100);
+        }
+
+        // =========================
+        // 할일 달성률
+        // =========================
+        int totalTodoCount = todos.size();
+        long completedTodoCount = todos.stream()
+                .filter(t -> "Y".equals(t.getTodoCompleteYn()))
+                .count();
+
+        int completedTodoPercent = 0;
+        if (totalTodoCount > 0) {
+            completedTodoPercent = (int) Math.round((double) completedTodoCount / totalTodoCount * 100);
+        }
+
+        // =========================
+        // 과목별 달성률 (과제+할일 합산)
+        // =========================
+        List<String> subjects = List.of("국어", "영어", "수학");
+
+        Map<String, long[]> subjectStats = new LinkedHashMap<>();
+        for (String s : subjects) {
+            subjectStats.put(s, new long[]{0L, 0L}); // [0]=total, [1]=completed
+        }
+
+        // ✅ 주간 항목 전체(과제+할일)에서 과목별 집계
+        for (Todo t : weeklyItems) {
+            String sub = t.getTodoSubjects();
+            if (!subjectStats.containsKey(sub)) continue;
+
+            subjectStats.get(sub)[0]++; // total++
+            if ("Y".equals(t.getTodoCompleteYn())) {
+                subjectStats.get(sub)[1]++; // completed++
+            }
+        }
+
+        Map<String, Integer> subjectPercentMap = new LinkedHashMap<>();
+        for (String sub : subjects) {
+            long total = subjectStats.get(sub)[0];
+            long completed = subjectStats.get(sub)[1];
+
+            int percent = (total == 0) ? 0 : (int) Math.round((double) completed / total * 100);
+            subjectPercentMap.put(sub, percent);
+        }
+
+        return new WeeklyMenteeReportResponseDto(
+                report == null ? null : report.getId(),
+                report == null ? null : report.getMentorId(),
+                report == null ? null : report.getReportDate(),
+                report == null ? null : report.getSummary(),
+                report == null ? null : report.getOverallEvaluation(),
+                report == null ? null : report.getStrengths(),
+                report == null ? null : report.getImprovements(),
+                report == null ? null : report.getCreateDatetime(),
+                report == null ? null : report.getUpdateDatetime(),
+                completedAssignPercent,
+                completedTodoPercent,
+                subjectPercentMap
+        );
     }
 
     private WeeklyReportResponseDto mapToResponseDto(WeeklyReport report) {

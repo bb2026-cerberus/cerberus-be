@@ -8,4 +8,7 @@ import java.util.List;
 public interface WeeklyReportRepository extends JpaRepository<WeeklyReport, Long> {
     List<WeeklyReport> findByMentorIdAndMenteeIdAndReportDateBetweenAndActivateYn(Long mentorId, Long menteeId, LocalDate startDate, LocalDate endDate, String activateYn);
     List<WeeklyReport> findByMenteeIdAndActivateYn(Long menteeId, String activateYn);
+    //  멘티의 특정 주차 주간리포트 아이디 조회
+    Long findWeeklyReportIdByMenteeIdAndReportDateBetweenAndActivateYn(Long menteeId, LocalDate startDate, LocalDate endDate, String activateYn);
+    WeeklyReport findByMenteeIdAndReportDateBetween(Long menteeId, LocalDate startDate, LocalDate endDate);
 }
