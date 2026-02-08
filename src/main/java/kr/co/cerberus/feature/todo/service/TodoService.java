@@ -8,7 +8,9 @@ import kr.co.cerberus.feature.todo.repository.TodoRepository;
 import kr.co.cerberus.global.error.CustomException;
 import kr.co.cerberus.global.error.ErrorCode;
 import kr.co.cerberus.global.jsonb.FeedbackFileData;
+import kr.co.cerberus.global.jsonb.FileInfo;
 import kr.co.cerberus.global.jsonb.TodoFileData;
+import kr.co.cerberus.global.util.FileStorageService;
 import kr.co.cerberus.global.util.JsonbUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -26,6 +28,7 @@ public class TodoService {
 
 	private final TodoRepository todoRepository;
 	private final FeedbackRepository feedbackRepository;
+	private final FileStorageService fileStorageService;
 
 	public List<TodoListResponseDto> findTodos(Long menteeId, LocalDate startDate, LocalDate endDate) {
 		// TODO: 보안 - 현재 로그인한 사용자가 요청한 menteeId에 접근 권한이 있는지 검증 필요
@@ -126,18 +129,21 @@ public class TodoService {
 	public VerificationResponseDto uploadVerification(Long todoId, List<MultipartFile> images) {
 		Todo todo = findById(todoId);
 
-		// TODO: 실제 파일 저장 로직 구현 (다중 파일 업로드)
-		String imageUrl = "/files/temp-" + todoId;
+		// 모든 파일을 저장하고 FileInfo 리스트 생성
+		List<FileInfo> fileInfos = images.stream()
+				.map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "todos"), null))
+				.toList();
 
-		// todoFile JSONB에 인증 사진 URL 저장
+		// todoFile JSONB에 인증 정보 업데이트
 		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 		TodoFileData updated = (existing != null)
-				? existing.updateVerificationImage(imageUrl)
-				: TodoFileData.withVerification(imageUrl);
+				? existing.updateFiles(fileInfos)
+				: TodoFileData.withFiles(fileInfos);
+		
 		todo.updateTodoFile(JsonbUtils.toJson(updated));
 
 		return VerificationResponseDto.builder()
-				.imageUrl(imageUrl)
+				.imageUrl(fileInfos.isEmpty() ? null : fileInfos.get(0).getFileUrl())
 				.build();
 	}
 

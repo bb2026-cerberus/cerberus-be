@@ -109,21 +109,24 @@ public class AssignmentService {
 	public VerificationResponseDto uploadVerification(Long assignmentId, List<MultipartFile> images) {
 		Todo todo = findAssignmentById(assignmentId);
 
-		// 실제 파일 저장 (첫 번째 파일만 대표 이미지로 사용하거나 구조에 맞게 조정)
-		String imageUrl = images.isEmpty() ? null : fileStorageService.storeFile(images.get(0), "assignments");
+		// 모든 파일을 저장하고 FileInfo 리스트 생성
+		List<FileInfo> fileInfos = images.stream()
+				.map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "assignments"), null))
+				.toList();
 
-		// todoFile JSONB에 인증 사진 URL 저장
+		// todoFile JSONB에 전체 파일 리스트 저장
 		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 		TodoFileData updated = (existing != null)
-				? existing.updateVerificationImage(imageUrl)
-				: TodoFileData.withVerification(imageUrl);
+				? existing.updateFiles(fileInfos)
+				: TodoFileData.withFiles(fileInfos);
+		
 		todo.updateTodoFile(JsonbUtils.toJson(updated));
 
 		// 인증 사진 업로드 시 자동으로 완료 표시 전환
 		todo.markComplete();
 
 		return VerificationResponseDto.builder()
-				.imageUrl(imageUrl)
+				.imageUrl(fileInfos.isEmpty() ? null : fileInfos.get(0).getFileUrl())
 				.build();
 	}
 
@@ -131,18 +134,21 @@ public class AssignmentService {
 	public VerificationResponseDto updateVerification(Long assignmentId, List<MultipartFile> images) {
 		Todo todo = findAssignmentById(assignmentId);
 
-		// 새 파일 저장
-		String imageUrl = images.isEmpty() ? null : fileStorageService.storeFile(images.get(0), "assignments");
+		// 모든 새 파일 저장
+		List<FileInfo> fileInfos = images.stream()
+				.map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "assignments"), null))
+				.toList();
 
 		// todoFile JSONB 업데이트
 		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 		TodoFileData updated = (existing != null)
-				? existing.updateVerificationImage(imageUrl)
-				: TodoFileData.withVerification(imageUrl);
+				? existing.updateFiles(fileInfos)
+				: TodoFileData.withFiles(fileInfos);
+		
 		todo.updateTodoFile(JsonbUtils.toJson(updated));
 
 		return VerificationResponseDto.builder()
-				.imageUrl(imageUrl)
+				.imageUrl(fileInfos.isEmpty() ? null : fileInfos.get(0).getFileUrl())
 				.build();
 	}
 
