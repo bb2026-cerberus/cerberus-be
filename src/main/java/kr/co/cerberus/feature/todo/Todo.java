@@ -75,7 +75,6 @@ public class Todo extends BaseEntity {
 
 	public void markComplete() {
 		this.todoCompleteYn = "Y";
-		this.todoDraftYn = "Y";
 	}
 
 	public void updateTodoFile(String todoFile) {
@@ -88,13 +87,11 @@ public class Todo extends BaseEntity {
 
 	// 임시저장 상태로 설정
 	public void markAsDraft() {
-		this.todoDraftYn = "N";
-		this.todoAssignYn = "N";
+		this.todoDraftYn = "Y";
 	}
 
 	// 과제 할당 상태로 설정
 	public void assign() {
 		this.todoAssignYn = "Y";
-		this.todoDraftYn = "Y";
 	}
 }

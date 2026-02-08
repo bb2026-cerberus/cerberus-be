@@ -35,7 +35,6 @@ public class TodoController {
 		return ResponseEntity.ok(CommonResponse.of(todos));
 	}
 
-
 	@Operation(summary = "주차별 할일 목록 조회", description = "특정 주차의 월요일 날짜를 기준으로 해당 주(월~일)의 할일 목록을 조회")
 	@GetMapping("/weekly")
 	public ResponseEntity<CommonResponse<List<GroupedTodosResponseDto>>> getTodosWeekly(
@@ -60,6 +59,23 @@ public class TodoController {
 			@Parameter(description = "새로운 할일 정보", required = true) @RequestBody TodoCreateRequestDto request) {
 		TodoCreateResponseDto created = todoService.createTodo(request);
 		return ResponseEntity.ok(CommonResponse.of(created));
+	}
+
+	@Operation(summary = "할일 임시 저장", description = "할일을 임시 저장합니다. 과목(subject)은 KOREAN, ENGLISH, MATH 중 하나여야 합니다.")
+	@PostMapping("/drafts")
+	public ResponseEntity<CommonResponse<TodoCreateResponseDto>> createDraftTodo(
+			@Parameter(description = "임시 저장할 할일 정보", required = true) @RequestBody TodoCreateRequestDto request) {
+		TodoCreateResponseDto created = todoService.createDraftTodo(request);
+		return ResponseEntity.ok(CommonResponse.of(created));
+	}
+
+	@Operation(summary = "할일 임시 저장 목록 조회", description = "임시 저장된 할일 목록을 조회합니다.")
+	@GetMapping("/drafts")
+	public ResponseEntity<CommonResponse<List<GroupedTodosResponseDto>>> getDraftTodos(
+			@Parameter(description = "멘티 ID", example = "2") @RequestParam(value = "menteeId") Long menteeId) {
+
+		List<GroupedTodosResponseDto> todos = todoService.findDraftTodos(menteeId);
+		return ResponseEntity.ok(CommonResponse.of(todos));
 	}
 
 	@Operation(summary = "할일 완료 상태 변경", description = "할일의 완료 상태를 토글합니다.")

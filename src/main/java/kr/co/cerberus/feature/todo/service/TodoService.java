@@ -36,12 +36,44 @@ public class TodoService {
 		List<Todo> todos;
 
 		if (startDate == null) {
-			todos = todoRepository.findByMenteeIdAndTodoAssignYnAndDeleteYn(menteeId, "N", "N");
+			todos = todoRepository.findByMenteeIdAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeId, "N", "N", "N");
 		} else if (endDate == null) {
-			todos = todoRepository.findByMenteeIdAndTodoDateAndTodoAssignYnAndDeleteYn(menteeId, startDate, "N", "N");
+			todos = todoRepository.findByMenteeIdAndTodoDateAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeId, startDate, "N", "N", "N");
 		} else {
-			todos = todoRepository.findByMenteeIdAndTodoDateBetweenAndTodoAssignYnAndDeleteYn(menteeId, startDate, endDate, "N", "N");
+			todos = todoRepository.findByMenteeIdAndTodoDateBetweenAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeId, startDate, endDate, "N", "N", "N");
 		}
+
+		// N+1 최적화: 필요한 Solution ID들을 수집하여 한 번에 조회
+		Set<Long> solutionIds = todos.stream()
+				.map(Todo::getSolutionId)
+				.filter(java.util.Objects::nonNull)
+				.collect(Collectors.toSet());
+
+		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionTitle(solutionIds);
+
+		todos.sort(Comparator.comparing(Todo::getTodoDate).reversed());
+		Map<LocalDate, List<TodoListResponseDto>> groupedTodos = todos.stream()
+				.map(todo -> TodoListResponseDto.builder()
+						.todoId(todo.getId())
+						.title(todo.getTodoName())
+						.subject(todo.getTodoSubjects())
+						.solution(solutionTitleMap.get(todo.getSolutionId()))
+						.date(todo.getTodoDate())
+						.completed("Y".equals(todo.getTodoCompleteYn()))
+						.build())
+				.collect(Collectors.groupingBy(TodoListResponseDto::getDate, TreeMap::new, Collectors.toList()));
+
+		return groupedTodos.entrySet().stream()
+				.map(entry -> GroupedTodosResponseDto.builder()
+						.date(entry.getKey())
+						.todos(entry.getValue())
+						.build())
+				.toList();
+	}
+
+	public List<GroupedTodosResponseDto> findDraftTodos(Long menteeId) {
+		// TODO: 보안 - 현재 로그인한 사용자가 요청한 menteeId에 접근 권한이 있는지 검증 필요
+		List<Todo> todos = todoRepository.findByMenteeIdAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeId, "N", "N", "Y");
 
 		// N+1 최적화: 필요한 Solution ID들을 수집하여 한 번에 조회
 		Set<Long> solutionIds = todos.stream()
@@ -126,6 +158,34 @@ public class TodoService {
 				.solutionId(request.getSolutionId())
 				.todoAssignYn("N")
 				.todoCompleteYn("N")
+				.todoDraftYn("N")
+				.build();
+
+		Todo saved = todoRepository.save(todo);
+
+		return TodoCreateResponseDto.builder()
+				.todoId(saved.getId())
+				.title(saved.getTodoName())
+				.content(saved.getTodoNote())
+				.subject(saved.getTodoSubjects())
+				.solution(solutionService.getSolutionTitleById(saved.getSolutionId()))
+				.date(saved.getTodoDate())
+				.completed("Y".equals(saved.getTodoCompleteYn()))
+				.build();
+	}
+
+	@Transactional
+	public TodoCreateResponseDto createDraftTodo(TodoCreateRequestDto request) {
+		Todo todo = Todo.builder()
+				.menteeId(request.getMenteeId())
+				.todoSubjects(request.getSubject().getDescription())
+				.todoName(request.getTitle())
+				.todoNote(request.getContent())
+				.todoDate(request.getDate())
+				.solutionId(request.getSolutionId())
+				.todoAssignYn("N")
+				.todoCompleteYn("N")
+				.todoDraftYn("Y")
 				.build();
 
 		Todo saved = todoRepository.save(todo);

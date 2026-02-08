@@ -12,6 +12,17 @@ import java.util.Optional;
 
 public interface TodoRepository extends JpaRepository<Todo, Long> {
 
+	// 멘티 ID, 과제 할당 여부, 삭제 여부, 드래프트 여부로 조회
+	List<Todo> findByMenteeIdAndTodoAssignYnAndDeleteYnAndTodoDraftYn(Long menteeId, String assignYn, String deleteYn, String todoDraftYn);
+
+	// 멘티 ID, 날짜, 과제 할당 여부, 삭제 여부, 드래프트 여부로 조회
+	List<Todo> findByMenteeIdAndTodoDateAndTodoAssignYnAndDeleteYnAndTodoDraftYn(
+			Long menteeId, LocalDate todoDate, String assignYn, String deleteYn, String todoDraftYn);
+
+	// 멘티 ID, 기간, 과제 할당 여부, 삭제 여부, 드래프트 여부로 조회
+	List<Todo> findByMenteeIdAndTodoDateBetweenAndTodoAssignYnAndDeleteYnAndTodoDraftYn(
+			Long menteeId, LocalDate startDate, LocalDate endDate, String assignYn, String deleteYn, String todoDraftYn);
+
 	// 멘티 ID, 과제 할당 여부, 삭제 여부로 조회 (기존 멘티 API 호환)
 	List<Todo> findByMenteeIdAndTodoAssignYnAndDeleteYn(Long menteeId, String assignYn, String deleteYn);
 
