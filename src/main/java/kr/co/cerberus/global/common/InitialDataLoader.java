@@ -30,8 +30,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -54,51 +52,52 @@ public class InitialDataLoader implements CommandLineRunner {
 
     @Override
     @Transactional
-    public void run(String... args) throws Exception {
+    public void run(String... args) {
         // 1. 회원 (멘토, 멘티) 생성
-        Member mentor01 = createMemberIfNotFound("mentor01", "1234", Role.MENTOR);
-        Member mentee01 = createMemberIfNotFound("mentee01", "1234", Role.MENTEE);
-        Member mentee02 = createMemberIfNotFound("mentee02", "1234", Role.MENTEE);
+        Member mentor01 = createMemberIfNotFound("mentor01", "김선생", "1234", Role.MENTOR);
+        Member mentee01 = createMemberIfNotFound("mentee01", "최학생", "1234", Role.MENTEE);
+        Member mentee02 = createMemberIfNotFound("mentee02", "박학생", "1234", Role.MENTEE);
 
         // 2. Relation 생성: mentor01과 mentee01, mentee02 연결
-        createRelationIfNotFound(mentor01.getId(), mentee01.getId());
-        createRelationIfNotFound(mentor01.getId(), mentee02.getId());
+        createRelationIfNotFound(mentor01.getSeq(), mentee01.getSeq());
+        createRelationIfNotFound(mentor01.getSeq(), mentee02.getSeq());
 
         // 3. Solution (학습지) 생성
-        List<Solution> solutions = createSolutions(mentor01.getId());
+        List<Solution> solutions = createSolutions(mentor01.getSeq());
 
         // 4. Assignment/Todo 생성
-        List<Todo> mentee01Todos = createAssignments(mentee01.getId(), mentor01.getId(), solutions);
-        List<Todo> mentee02Todos = createAssignments(mentee02.getId(), mentor01.getId(), solutions);
+        List<Todo> mentee01Todos = createAssignments(mentee01.getSeq(), mentor01.getSeq(), solutions);
+        List<Todo> mentee02Todos = createAssignments(mentee02.getSeq(), mentor01.getSeq(), solutions);
 
         // 5. Feedback 생성
-        createFeedbacks(mentor01.getId(), mentee01Todos);
-        createFeedbacks(mentor01.getId(), mentee02Todos);
+        createFeedbacks(mentor01.getSeq(), mentee01Todos);
+        createFeedbacks(mentor01.getSeq(), mentee02Todos);
 
         // 6. Q&A 생성
-        createQnas(mentor01.getId(), mentee01.getId());
-        createQnas(mentor01.getId(), mentee02.getId());
+        createQnas(mentor01.getSeq(), mentee01.getSeq());
+        createQnas(mentor01.getSeq(), mentee02.getSeq());
 
         // 7. WeeklyReport 생성 (지난주: 2026-02-02 월요일 시작 주)
-        createWeeklyReports(mentor01.getId(), mentee01.getId(), LocalDate.of(2026, 2, 2));
-        createWeeklyReports(mentor01.getId(), mentee02.getId(), LocalDate.of(2026, 2, 2));
+        createWeeklyReports(mentor01.getSeq(), mentee01.getSeq(), LocalDate.of(2026, 2, 2));
+        createWeeklyReports(mentor01.getSeq(), mentee02.getSeq(), LocalDate.of(2026, 2, 2));
 
         // 8. WeaknessSolution 생성
-        createWeaknessSolutions(mentor01.getId(), mentee01.getId());
-        createWeaknessSolutions(mentor01.getId(), mentee02.getId());
+        createWeaknessSolutions(mentor01.getSeq(), mentee01.getSeq());
+        createWeaknessSolutions(mentor01.getSeq(), mentee02.getSeq());
 
         System.out.println("[InitialData] 모든 초기 데이터 생성 완료.");
     }
 
-    private Member createMemberIfNotFound(String name, String password, Role role) {
-        return memberRepository.findByName(name).orElseGet(() -> {
+    private Member createMemberIfNotFound(String id, String name, String password, Role role) {
+        return memberRepository.findByName(id).orElseGet(() -> {
             Member member = Member.builder()
+                    .id(id)
                     .name(name)
                     .password(PasswordUtil.encode(password))
                     .role(role)
                     .build();
             memberRepository.save(member);
-            System.out.println("[InitialData] " + role + " 생성 완료: " + name);
+            System.out.println("[InitialData] " + role + " 생성 완료: " + id);
             return member;
         });
     }

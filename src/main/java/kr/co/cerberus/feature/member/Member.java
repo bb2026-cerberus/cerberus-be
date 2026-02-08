@@ -20,7 +20,10 @@ public class Member extends BaseEntity {
             allocationSize = 1
     )
     @Column(name = "mem_seq")
-    private Long id;
+    private Long seq;
+
+    @Column(name ="mem_id")
+    private String id;
 
     @Column(name = "mem_name")
     private String name;
