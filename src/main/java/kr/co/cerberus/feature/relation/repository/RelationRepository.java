@@ -8,4 +8,6 @@ import java.util.List;
 
 public interface RelationRepository extends JpaRepository<Relation, Long> {
     List<Relation> findByMentorId(Long mentorId);
+	
+	Relation findFirstByMenteeId(Long menteeId);
 }

@@ -102,10 +102,7 @@ public class AssignmentService {
 		}
 
 		String feedbackContent = feedbackRepository.findByTodoIdAndDeleteYn(assignmentId, "N")
-				.map(feedback -> {
-					FeedbackFileData data = JsonbUtils.fromJson(feedback.getFeedFile(), FeedbackFileData.class);
-					return data != null ? data.getContent() : null;
-				})
+				.map(kr.co.cerberus.feature.feedback.Feedback::getContent)
 				.orElse(null);
 
 		List<FileInfo> verificationImages = Collections.emptyList();

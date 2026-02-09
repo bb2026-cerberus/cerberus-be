@@ -83,10 +83,7 @@ public class TodoService {
 		List<FileInfo> solutionWorkbooks = solutionService.parseSolutionFiles(todo.getSolutionId());
 
 		String feedbackContent = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N")
-				.map(feedback -> {
-					FeedbackFileData data = JsonbUtils.fromJson(feedback.getFeedFile(), FeedbackFileData.class);
-					return data != null ? data.getContent() : null;
-				})
+				.map(kr.co.cerberus.feature.feedback.Feedback::getContent)
 				.orElse(null);
 
 		TodoFileData todoFileData = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);

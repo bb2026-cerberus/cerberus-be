@@ -2,7 +2,6 @@ package kr.co.cerberus.global.common;
 
 import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
-import kr.co.cerberus.global.jsonb.FeedbackFileData;
 import kr.co.cerberus.feature.member.Member;
 import kr.co.cerberus.feature.member.Role;
 import kr.co.cerberus.feature.member.repository.MemberRepository;
@@ -198,22 +197,16 @@ public class InitialDataLoader implements CommandLineRunner {
                 String feedDraftYn = random.nextBoolean() ? "N" : "Y";
                 String feedCompleteYn = "N".equals(feedDraftYn) ? "Y" : "N";
 
-                List<FileInfo> feedbackFiles = List.of(
-                        createFileInfo("feedback_" + todo.getId() + "_file.pdf", "/feedbacks/" + todo.getId() + "/file.pdf", "피드백 첨부 자료")
-                );
                 String feedbackContent = "멘토 피드백 내용: " + todo.getTodoName() + "에 대한 상세 피드백입니다.";
                 String feedbackSummary = "풀이과정을 자세히 쓰기 (" + todo.getTodoName() + ")";
-                FeedbackFileData feedbackData = new FeedbackFileData(
-                        feedbackContent,
-                        feedbackSummary,
-                        feedbackFiles
-                );
+
                 Feedback feedback = Feedback.builder()
                         .todoId(todo.getId())
                         .menteeId(todo.getMenteeId())
                         .mentorId(mentorId)
-                        .feedFile(JsonbUtils.toJson(feedbackData))
-                        .feedDate(todo.getTodoDate().plusDays(1)) // 과제 다음날 피드백
+                        .summary(feedbackSummary)
+                        .content(feedbackContent)
+                        .feedDate(todo.getTodoDate())
                         .feedDraftYn(feedDraftYn)
                         .feedCompleteYn(feedCompleteYn)
                         .build();
@@ -248,7 +241,6 @@ public class InitialDataLoader implements CommandLineRunner {
     }
 
     private void createWeeklyReports(Long mentorId, Long menteeId, LocalDate reportStartDate) {
-        List<FileInfo> reportFiles = List.of(createFileInfo("weekly_report_" + menteeId + ".pdf", "/reports/" + menteeId + "/weekly_report.pdf", "주간 요약 파일"));
         WeeklyReport report = WeeklyReport.builder()
                 .menteeId(menteeId)
                 .mentorId(mentorId)

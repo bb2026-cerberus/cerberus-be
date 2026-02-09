@@ -1,5 +1,6 @@
 package kr.co.cerberus.feature.report.service;
 
+import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.member.Role;
 import kr.co.cerberus.feature.member.repository.MemberRepository;
 import kr.co.cerberus.feature.report.WeeklyReport;
@@ -13,7 +14,6 @@ import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
 import kr.co.cerberus.global.error.CustomException;
 import kr.co.cerberus.global.error.ErrorCode;
 import kr.co.cerberus.global.util.JsonbUtils;
-import kr.co.cerberus.global.jsonb.FeedbackFileData;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
@@ -149,12 +149,11 @@ public class WeeklyReportService {
     @Transactional
     public WeeklyReportResponseDto generateAndSaveAiReportDraft(Long mentorId, Long menteeId, LocalDate reportDate) {
         LocalDate endDate = reportDate.plusDays(6);
-        List<kr.co.cerberus.feature.feedback.Feedback> feedbacks = feedbackRepository.findByMenteeIdAndFeedDateBetween(menteeId, reportDate, endDate);
+        List<Feedback> feedbacks = feedbackRepository.findByMenteeIdAndFeedDateBetween(menteeId, reportDate, endDate);
 
         String feedbackContext = feedbacks.stream()
                 .map(f -> {
-                    FeedbackFileData data = JsonbUtils.fromJson(f.getFeedFile(), FeedbackFileData.class);
-                    return String.format("- [%s] 요약: %s / 상세내용: %s", f.getFeedDate(), data.getSummary(), data.getContent());
+                    return String.format("- [%s] 요약: %s / 상세내용: %s", f.getFeedDate(), f.getSummary(), f.getContent());
                 })
                 .collect(Collectors.joining("\n"));
 

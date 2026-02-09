@@ -6,7 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
-import java.util.Optional;
 
 public interface TodoRepository extends JpaRepository<Todo, Long> {
 
@@ -27,16 +26,12 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
 
 	// 특정 멘토의 멘티들이 임시 저장한 과제의 개수
 	long countByMenteeIdInAndTodoAssignYn(List<Long> menteeIds, String assignYn);
-
-	// 진행률 통계를 위한 완료된 할 일 조회
-	List<Todo> findByMenteeIdAndTodoSubjectsAndTodoCompleteYn(
-			Long menteeId, String todoSubjects, String completeYn);
-
+	
 	// MenteeId로 모든 Todo를 조회 (진행률 계산용)
 	List<Todo> findByMenteeId(Long menteeId);
 
 	// 멘티 ID, 과목별 모든 할 일을 가져옴
 	List<Todo> findByMenteeIdAndTodoSubjects(Long menteeId, String todoSubjects);
-
-	long countByMenteeIdInAndTodoDraftYnAfter(Collection<Long> menteeIds, String todoDraftYnAfter);
+	
+	List<Todo> findByMenteeIdInAndTodoDateBetween(Collection<Long> menteeIds, LocalDate todoDateAfter, LocalDate todoDateBefore);
 }

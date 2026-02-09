@@ -14,11 +14,7 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
 
 	// 기존 멘티 API 호환을 위해 유지
 	List<Feedback> findByTodoIdInAndDeleteYn(List<Long> todoIds, String deleteYn);
-
-	// 기존 멘티 API 호환을 위해 유지
-	List<Feedback> findByTodoIdInAndFeedDateBetweenAndDeleteYn(
-			List<Long> todoIds, LocalDate startDate, LocalDate endDate, String deleteYn);
-
+	
 	// 멘토 ID로 피드백 조회 (멘토 홈)
 	List<Feedback> findByMentorId(Long mentorId);
 
