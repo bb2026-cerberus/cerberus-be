@@ -6,5 +6,5 @@ import java.util.List;
 
 public interface RelationRepository extends JpaRepository<Relation, Long> {
     List<Relation> findByMentorIdAndActivateYn(Long mentorId, String activateYn);
-    List<Relation> findByMenteeIdAndActivateYn(Long menteeId, String activateYn);
+    Relation findByMenteeIdAndDeleteYn(Long menteeId, String deleteYn);
 }

@@ -7,7 +7,7 @@ public record MentorQnaSummaryDto(
     Long qnaId,
     Long menteeId,
     String menteeName,
-    String title,
+//    String title,
     String status,
     LocalDateTime createDatetime
 ) {}

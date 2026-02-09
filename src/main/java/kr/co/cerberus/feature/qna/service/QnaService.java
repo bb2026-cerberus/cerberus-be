@@ -1,6 +1,5 @@
 package kr.co.cerberus.feature.qna.service;
 
-import kr.co.cerberus.feature.member.Member;
 import kr.co.cerberus.feature.member.Role;
 import kr.co.cerberus.feature.member.repository.MemberRepository;
 import kr.co.cerberus.feature.qna.Qna;
@@ -9,15 +8,21 @@ import kr.co.cerberus.feature.qna.dto.QnaCreateRequestDto;
 import kr.co.cerberus.feature.qna.dto.QnaResponseDto;
 import kr.co.cerberus.feature.qna.dto.QnaUpdateRequestDto;
 import kr.co.cerberus.feature.qna.repository.QnaRepository;
+import kr.co.cerberus.feature.relation.Relation;
 import kr.co.cerberus.feature.relation.repository.RelationRepository;
 import kr.co.cerberus.global.error.CustomException;
 import kr.co.cerberus.global.error.ErrorCode;
+import kr.co.cerberus.global.jsonb.FileInfo;
+import kr.co.cerberus.global.util.FileStorageService;
 import kr.co.cerberus.global.util.JsonbUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.core.type.TypeReference;
 
+import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -29,37 +34,43 @@ import java.util.stream.Collectors;
 public class QnaService {
 
     private final QnaRepository qnaRepository;
-    private final MemberRepository memberRepository; // 멘티/멘토 유효성 검증용
-    private final RelationRepository relationRepository; // 멘토-멘티 관계 검증용
+    private final MemberRepository memberRepository;
+    private final RelationRepository relationRepository;
+    private final FileStorageService fileStorageService;
 
     // Q&A 생성 (멘티가 질문)
     @Transactional
-    public QnaResponseDto createQna(Long userId, Role userRole, QnaCreateRequestDto requestDto) {
+    public QnaResponseDto createQna(Long userId, Role userRole, QnaCreateRequestDto requestDto, List<MultipartFile> files) {
         // 멘티가 질문하는 경우
-        if (userRole == Role.MENTEE) {
-            if (!Objects.equals(requestDto.menteeId(), userId)) {
-                throw new CustomException(ErrorCode.ACCESS_DENIED, "본인의 Q&A만 등록할 수 있습니다.");
-            }
-            // 요청 멘토 ID 유효성 및 관계 검증
-            validateMentorMenteeRelation(requestDto.mentorId(), requestDto.menteeId());
-        } else {
+        if (userRole != Role.MENTEE) {
             throw new CustomException(ErrorCode.ACCESS_DENIED, "멘티만 Q&A를 등록할 수 있습니다.");
         }
 
         // 멘티 ID 존재 여부 확인
         memberRepository.findById(requestDto.menteeId())
                 .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND, "유효하지 않은 멘티 ID입니다."));
-        // 멘토 ID 존재 여부 확인
-        memberRepository.findById(requestDto.mentorId())
-                .orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND, "유효하지 않은 멘토 ID입니다."));
 
+        // 멘티-멘토 관계에서 멘토 ID 조회
+        Relation relation = relationRepository.findByMenteeIdAndDeleteYn(requestDto.menteeId(), "N");
+        if (relation == null) {
+            throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND, "멘토가 배정되지 않았습니다.");
+        }
+        Long mentorId = relation.getMentorId();
+
+        // 파일 저장 및 FileInfo 리스트 생성
+        List<FileInfo> fileInfos = Collections.emptyList();
+        if (files != null && !files.isEmpty()) {
+            fileInfos = files.stream()
+                    .map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "qnas"), null))
+                    .toList();
+        }
 
         Qna qna = Qna.builder()
                 .menteeId(requestDto.menteeId())
-                .mentorId(requestDto.mentorId())
-                .title(requestDto.title())
+                .mentorId(mentorId)
+                .qnaDate(requestDto.date())
                 .questionContent(requestDto.questionContent())
-                .qnaFile(JsonbUtils.toJson(requestDto.qnaFiles()))
+                .qnaFile(JsonbUtils.toJson(fileInfos))
                 .qnaCompleteYn("N")
                 .build();
         Qna savedQna = qnaRepository.save(qna);
@@ -68,24 +79,27 @@ public class QnaService {
 
     // Q&A 수정
     @Transactional
-    public QnaResponseDto updateQna(Long userId, Role userRole, QnaUpdateRequestDto requestDto) {
-        Qna qna = qnaRepository.findById(requestDto.qnaId())
+    public QnaResponseDto updateQna(QnaUpdateRequestDto requestDto, List<MultipartFile> files) {
+        Qna qna = qnaRepository.findByIdAndDeleteYn(requestDto.qnaId(), "N")
                 .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
-
-        // 요청하는 멘티가 해당 Q&A의 소유자인지 확인
-        if (!Objects.equals(qna.getMenteeId(), userId) || userRole != Role.MENTEE) {
-            throw new CustomException(ErrorCode.ACCESS_DENIED, "본인의 Q&A만 수정할 수 있습니다.");
-        }
 
         if ("Y".equals(qna.getQnaCompleteYn())) {
             throw new CustomException(ErrorCode.INVALID_INPUT_VALUE, "답변이 완료된 Q&A는 수정할 수 없습니다.");
         }
 
-        qna.updateQuestion(
-                requestDto.title(),
-                requestDto.questionContent(),
-                JsonbUtils.toJson(requestDto.qnaFiles())
-        );
+        // 입력값이 있으면 변경, 없으면 기존 유지
+        String questionContent = (requestDto.questionContent() != null && !requestDto.questionContent().isBlank())
+                ? requestDto.questionContent() : qna.getQuestionContent();
+
+        String qnaFile = qna.getQnaFile();
+        if (files != null && !files.isEmpty()) {
+            List<FileInfo> fileInfos = files.stream()
+                    .map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "qnas"), null))
+                    .toList();
+            qnaFile = JsonbUtils.toJson(fileInfos);
+        }
+
+        qna.updateQuestion(questionContent, qnaFile);
         return mapToResponseDto(qna);
     }
 
@@ -107,19 +121,11 @@ public class QnaService {
         return mapToResponseDto(qna);
     }
 
-    // Q&A 삭제 (비활성화)
+    // Q&A 삭제
     @Transactional
-    public void deleteQna(Long userId, Role userRole, Long qnaId) {
-        Qna qna = qnaRepository.findById(qnaId)
+    public void deleteQna(Long qnaId) {
+        Qna qna = qnaRepository.findByIdAndDeleteYn(qnaId, "N")
                 .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
-
-        // 멘티 본인 또는 해당 멘티의 멘토만 삭제 가능
-        if (userRole == Role.MENTEE && !Objects.equals(qna.getMenteeId(), userId)) {
-            throw new CustomException(ErrorCode.ACCESS_DENIED, "본인의 Q&A만 삭제할 수 있습니다.");
-        } else if (userRole == Role.MENTOR && !Objects.equals(qna.getMentorId(), userId)) {
-            throw new CustomException(ErrorCode.ACCESS_DENIED, "관리하는 멘티의 Q&A만 삭제할 수 있습니다.");
-        }
-
         qna.delete();
     }
 
@@ -128,6 +134,13 @@ public class QnaService {
         Qna qna = qnaRepository.findById(qnaId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
         return mapToResponseDto(qna);
+    }
+
+    // 멘티 ID와 날짜로 Q&A 단건 조회
+    public QnaResponseDto getQnaByMenteeIdAndDate(Long menteeId, LocalDate date) {
+        Qna qna = qnaRepository.findByMenteeIdAndQnaDateAndDeleteYn(menteeId, date, "N")
+                .orElse(null);
+        return qna != null ? mapToResponseDto(qna) : null;
     }
 
     // 멘토별 Q&A 목록 조회 (멘토용)
@@ -157,7 +170,7 @@ public class QnaService {
                 qna.getId(),
                 qna.getMenteeId(),
                 qna.getMentorId(),
-                qna.getTitle(),
+                qna.getQnaDate(),
                 qna.getQuestionContent(),
                 qna.getAnswerContent(),
                 Optional.ofNullable(JsonbUtils.fromJson(qna.getQnaFile(), new TypeReference<List<kr.co.cerberus.global.jsonb.FileInfo>>() {})).orElse(List.of()),

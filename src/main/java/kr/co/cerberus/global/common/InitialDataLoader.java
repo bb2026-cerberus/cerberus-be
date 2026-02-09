@@ -231,7 +231,7 @@ public class InitialDataLoader implements CommandLineRunner {
             Qna qna = Qna.builder()
                     .menteeId(menteeId)
                     .mentorId(mentorId)
-                    .title("Q&A 질문 " + i + "입니다.")
+                    .qnaDate(LocalDate.now().minusDays(i))
                     .questionContent("멘티가 묻습니다: " + i + "번째 질문 내용입니다.")
                     .qnaFile(JsonbUtils.toJson(qnaFiles))
                     .qnaCompleteYn("N")

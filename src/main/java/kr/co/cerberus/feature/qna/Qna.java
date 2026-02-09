@@ -10,6 +10,8 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.LocalDate;
+
 @Getter
 @Entity
 @SuperBuilder(toBuilder = true)
@@ -29,8 +31,8 @@ public class Qna extends BaseEntity {
     @Column(name = "mentor_seq", nullable = false)
     private Long mentorId;
 
-    @Column(name = "title", nullable = false)
-    private String title; // Q&A 제목
+    @Column(name = "qna_date", nullable = false)
+    private LocalDate qnaDate;
 
     @Column(name = "question_content", columnDefinition = "TEXT", nullable = false)
     private String questionContent;
@@ -46,8 +48,9 @@ public class Qna extends BaseEntity {
     @Column(name = "qna_complete_yn", columnDefinition = "bpchar(1) default 'N'", nullable = false)
     private String qnaCompleteYn = "N";
 
-    public void updateQuestion(String title, String questionContent, String qnaFile) {
-        this.title = title;
+
+    public void updateQuestion(String questionContent, String qnaFile) {
+//        this.title = title;
         this.questionContent = questionContent;
         this.qnaFile = qnaFile;
     }

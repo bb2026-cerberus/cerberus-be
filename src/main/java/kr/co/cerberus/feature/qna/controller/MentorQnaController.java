@@ -4,13 +4,10 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.co.cerberus.feature.member.Role;
 import kr.co.cerberus.feature.qna.dto.QnaAnswerRequestDto;
-import kr.co.cerberus.feature.qna.dto.QnaCreateRequestDto;
 import kr.co.cerberus.feature.qna.dto.QnaResponseDto;
-import kr.co.cerberus.feature.qna.dto.QnaUpdateRequestDto;
 import kr.co.cerberus.feature.qna.service.QnaService;
 import kr.co.cerberus.global.common.CommonResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
