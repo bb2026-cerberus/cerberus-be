@@ -3,6 +3,7 @@ package kr.co.cerberus.feature.mentor.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.co.cerberus.feature.mentor.dto.DraftCountResponseDto;
+import kr.co.cerberus.feature.mentor.dto.MenteeDetailsResponseDto;
 import kr.co.cerberus.feature.mentor.dto.MenteeProgressResponseDto;
 import kr.co.cerberus.feature.mentor.dto.MentorHomeResponseDto;
 import kr.co.cerberus.feature.mentor.service.MentorService;

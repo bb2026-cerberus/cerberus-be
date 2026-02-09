@@ -46,6 +46,12 @@ import java.time.temporal.TemporalAdjusters;
 public class MentorService {
 // ... (existing fields)
 
+    private final MemberRepository memberRepository;
+    private final TodoRepository  todoRepository;
+    private final FeedbackRepository feedbackRepository;
+    private final QnaRepository qnaRepository;
+    private final RelationRepository relationRepository;
+
     // 멘티 상세 현황 조회 (이미지 img_1.png 대응)
     public MenteeDetailsResponseDto getMenteeDetails(Long mentorId, Long menteeId) {
         if (!isMentorManagingMentee(mentorId, menteeId)) {
