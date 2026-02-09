@@ -3,6 +3,7 @@ package kr.co.cerberus.feature.mentor.service;
 import kr.co.cerberus.feature.member.Member;
 import kr.co.cerberus.feature.member.repository.MemberRepository;
 import kr.co.cerberus.feature.mentor.dto.DraftCountResponseDto;
+import kr.co.cerberus.feature.mentor.dto.MenteeManagementDto;
 import kr.co.cerberus.feature.mentor.dto.MenteeProgressResponseDto;
 import kr.co.cerberus.feature.mentor.dto.MentorAssignmentSummaryDto;
 import kr.co.cerberus.feature.mentor.dto.MentorFeedbackSummaryDto;
@@ -42,14 +43,11 @@ public class MentorService {
     private final RelationRepository relationRepository; // RelationRepository 주입
     private final MemberRepository memberRepository; // MemberRepository 주입
 
-
-
-
     // 멘토 홈 화면 데이터 조회
     public MentorHomeResponseDto getMentorHomeData(Long mentorId, LocalDate date) {
         List<Long> menteeIds = getMenteeIdsByMentorId(mentorId);
         if (menteeIds.isEmpty()) {
-            return new MentorHomeResponseDto(List.of(), List.of(), List.of());
+            return new MentorHomeResponseDto(List.of(), List.of(), List.of(), List.of());
         }
         Map<Long, String> menteeNames = getMenteeNames(menteeIds);
 
@@ -57,12 +55,10 @@ public class MentorService {
         LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
 
         // 1. 과제 요약 - 할당된 과제(assignYn='Y')만 조회
-        List<MentorAssignmentSummaryDto> assignmentSummaries = todoRepository.findByMenteeIdInAndTodoAssignYnAndTodoDateBetween(
-                        menteeIds,
-                        "Y",
-                        date,
-                        date)
-                .stream()
+        List<Todo> allTodos = todoRepository.findByMenteeIdInAndTodoAssignYnAndTodoDateBetween(
+                menteeIds, "Y", date, date);
+
+        List<MentorAssignmentSummaryDto> assignmentSummaries = allTodos.stream()
                 .map(todo -> new MentorAssignmentSummaryDto(
                         todo.getId(),
                         todo.getMenteeId(),
@@ -100,13 +96,40 @@ public class MentorService {
                         qna.getId(),
                         qna.getMenteeId(),
                         menteeNames.getOrDefault(qna.getMenteeId(), "알 수 없는 멘티"),
-//                        qna.getTitle(),
                         "Y".equals(qna.getQnaCompleteYn()) ? "ANSWERED" : "PENDING",
                         qna.getCreateDatetime()
                 ))
                 .collect(Collectors.toList());
 
-        return new MentorHomeResponseDto(assignmentSummaries, feedbackSummaries, qnaSummaries);
+        // 4. 멘티 관리 요약 (Mentee Management) - 오늘 할당된 과제 기준 통계
+        List<MenteeManagementDto> menteeManagementList = menteeIds.stream()
+                .map(menteeId -> {
+                    // 해당 멘티의 오늘 할당된 과제 필터링
+                    List<Todo> menteeTodos = allTodos.stream()
+                            .filter(todo -> todo.getMenteeId().equals(menteeId))
+                            .toList();
+
+                    int totalCount = menteeTodos.size();
+                    int completedCount = (int) menteeTodos.stream()
+                            .filter(todo -> "Y".equals(todo.getTodoCompleteYn()))
+                            .count();
+                    List<String> unsubmittedTitles = menteeTodos.stream()
+                            .filter(todo -> !"Y".equals(todo.getTodoCompleteYn()))
+                            .map(Todo::getTodoName)
+                            .toList();
+
+                    return new MenteeManagementDto(
+                            menteeId,
+                            menteeNames.getOrDefault(menteeId, "알 수 없는 멘티"),
+                            completedCount,
+                            totalCount,
+                            unsubmittedTitles
+                    );
+                })
+                .sorted(Comparator.comparing(MenteeManagementDto::menteeName)) // 이름순 정렬
+                .collect(Collectors.toList());
+
+        return new MentorHomeResponseDto(assignmentSummaries, feedbackSummaries, qnaSummaries, menteeManagementList);
     }
 
     private String determineStatus(Todo todo) {
