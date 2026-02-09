@@ -46,4 +46,13 @@ public class MentorController {
         MenteeProgressResponseDto response = mentorService.getMenteeProgress(mentorId, menteeId);
         return ResponseEntity.ok(CommonResponse.of(response));
     }
+
+    @Operation(summary = "멘티 상세 현황 조회", description = "이미지 img_1.png 요구사항에 맞춰 오늘 현황, 이번 주 달성률, 과목별 진행도, 최근 피드백 요약을 조회합니다.")
+    @GetMapping("/{mentorId}/mentees/{menteeId}/details")
+    public ResponseEntity<CommonResponse<MenteeDetailsResponseDto>> getMenteeDetails(
+            @PathVariable Long mentorId,
+            @PathVariable Long menteeId) {
+        MenteeDetailsResponseDto response = mentorService.getMenteeDetails(mentorId, menteeId);
+        return ResponseEntity.ok(CommonResponse.of(response));
+    }
 }
