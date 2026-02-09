@@ -160,4 +160,28 @@ public class TodoController {
 				.header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
 				.body(resource);
 	}
+
+    @Operation(summary = "일별 타이머 조회", description = "특정 날짜의 모든 todo_timer를 모아 총시간/평균시간과 함께 반환합니다.")
+    @GetMapping("/timers/daily")
+    public ResponseEntity<CommonResponse<TodoTimerDailyResponseDto>> getTimersByDate(
+            @Parameter(
+                    description = "멘티 ID",
+                    example = "2",
+                    required = true
+            )
+            @RequestParam("menteeId") Long menteeId,
+
+            @Parameter(
+                    description = "조회할 날짜 (YYYY-MM-DD)",
+                    example = "2026-02-03",
+                    required = true
+            )
+            @RequestParam("date")
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+            LocalDate date
+    ) {
+        TodoTimerDailyResponseDto result = todoService.getTimersByDate(menteeId, date);
+        return ResponseEntity.ok(CommonResponse.of(result));
+    }
+
 }
