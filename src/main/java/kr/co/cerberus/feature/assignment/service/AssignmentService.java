@@ -165,7 +165,7 @@ public class AssignmentService {
 				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
 		// 피드백 존재 시 인증사진 수정 불가
-		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYn(assignmentId, "N");
+		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYnAndFeedCompleteYn(assignmentId, "N", "Y");
 		if (feedback.isPresent()) {
 			throw new CustomException(ErrorCode.INVALID_PARAMETER);
 		}
@@ -197,7 +197,7 @@ public class AssignmentService {
 				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
 		// 피드백 존재 시 인증사진 삭제 불가
-		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYn(assignmentId, "N");
+		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYnAndFeedCompleteYn(assignmentId, "N", "Y");
 		if (feedback.isPresent()) {
 			throw new CustomException(ErrorCode.INVALID_PARAMETER);
 		}

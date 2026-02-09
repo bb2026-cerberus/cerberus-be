@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.co.cerberus.feature.assignment.dto.AssignmentDetailResponseDto;
 import kr.co.cerberus.feature.assignment.dto.GroupedAssignmentsResponseDto;
 import kr.co.cerberus.feature.assignment.service.AssignmentService;
+import kr.co.cerberus.feature.feedback.service.FeedbackService;
 import kr.co.cerberus.feature.todo.dto.VerificationResponseDto;
 import kr.co.cerberus.global.common.CommonResponse;
 import kr.co.cerberus.global.util.FileStorageService;
@@ -32,6 +33,7 @@ public class AssignmentController {
 
 	private final AssignmentService assignmentService;
 	private final FileStorageService fileStorageService;
+	private final FeedbackService feedbackService;
 
 	@Operation(summary = "과제 목록 조회", description = "전체/기간별/일별 과제 목록을 조회합니다. startDate만 있으면 일별, startDate+endDate는 기간별, 둘 다 없으면 전체 조회")
 	@GetMapping
@@ -68,6 +70,7 @@ public class AssignmentController {
 			@Parameter(description = "인증 사진 파일 (여러 개 가능)", required = true) @RequestPart("images") List<MultipartFile> images) {
 
 		VerificationResponseDto response = assignmentService.uploadVerification(assignmentId, images);
+		feedbackService.analyzeTodoImagesAsync(assignmentId);
 		return ResponseEntity.ok(CommonResponse.of(response));
 	}
 
@@ -78,6 +81,7 @@ public class AssignmentController {
 			@Parameter(description = "새로운 인증 사진 파일 (여러 개 가능)", required = true) @RequestPart("images") List<MultipartFile> images) {
 
 		VerificationResponseDto response = assignmentService.updateVerification(assignmentId, images);
+		feedbackService.analyzeTodoImagesAsync(assignmentId);
 		return ResponseEntity.ok(CommonResponse.of(response));
 	}
 
