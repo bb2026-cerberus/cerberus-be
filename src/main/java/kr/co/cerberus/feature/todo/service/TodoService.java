@@ -315,7 +315,8 @@ public class TodoService {
 
     @Transactional
     public void addTimerSession(Long todoId, TodoTimerSessionCreateRequestDto request) {
-        Todo todo = findById(todoId);
+        Todo todo =todoRepository.findById(todoId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
         if (request.getEndAt().isBefore(request.getStartAt())) {
             throw new CustomException(ErrorCode.INVALID_PARAMETER, "종료 시간이 시작 시간보다 빠릅니다.");
