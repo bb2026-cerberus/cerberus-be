@@ -110,8 +110,8 @@ public class FeedbackService {
         feedback.updateFeedback(
                 requestDto.summary(),
                 requestDto.content(),
-                requestDto.draftYn(),
-                requestDto.completeYn()
+                "N",
+                "Y"
         );
 
         feedbackRepository.save(feedback);
@@ -166,7 +166,7 @@ public class FeedbackService {
                         });
                     })
                     .call()
-                    .entity(new ParameterizedTypeReference<Map<String, String>>() {});
+                    .entity(new ParameterizedTypeReference<>() {});
 
             if (aiResult != null && !aiResult.isEmpty()) {
 				Relation relation = relationRepository.findFirstByMenteeId(todo.getMenteeId());
@@ -180,7 +180,7 @@ public class FeedbackService {
                 feedback.updateFeedback(
                         aiResult.get("summary"),
                         aiResult.get("content"),
-                        "Y", // 임시저장
+                        "N",
                         "N"
                 );
                 feedbackRepository.save(feedback);

@@ -7,7 +7,5 @@ public record FeedbackSaveRequestDto(
     @NotNull Long menteeId,
     @NotNull Long mentorId,
     String content,
-    String summary,
-    @NotNull String draftYn,
-    @NotNull String completeYn
+    String summary
 ) {}

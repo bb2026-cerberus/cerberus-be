@@ -47,5 +47,6 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
 	List<Todo> findByMenteeIdInAndTodoDateBetween(Collection<Long> menteeIds, LocalDate todoDateAfter, LocalDate todoDateBefore);
 	
 	List<Todo> findByMenteeIdAndTodoDateBetweenAndDeleteYn(Long menteeId, LocalDate startDate, LocalDate endDate, String deleteYn);
-	
+
+	List<Todo> findAllByTodoDateBetweenAndTodoAssignYnAndDeleteYnOrderByMenteeId(LocalDate todoDateAfter, LocalDate todoDateBefore, String todoAssignYn, String deleteYn);
 }

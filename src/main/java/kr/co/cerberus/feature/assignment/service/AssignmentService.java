@@ -5,7 +5,6 @@ import kr.co.cerberus.feature.assignment.dto.AssignmentListResponseDto;
 import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.dto.FeedbackDetailResponseDto;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
-import kr.co.cerberus.feature.report.service.WeeklyReportService;
 import kr.co.cerberus.feature.solution.service.SolutionService;
 import kr.co.cerberus.feature.todo.Todo;
 import kr.co.cerberus.feature.todo.dto.VerificationResponseDto;
@@ -37,17 +36,20 @@ public class AssignmentService {
 	private final FeedbackRepository feedbackRepository;
 	private final SolutionService solutionService;
 	private final FileStorageService fileStorageService;
-	private final WeeklyReportService weeklyReportService;
 	
 	public List<GroupedAssignmentsResponseDto> findAssignments(Long menteeId, LocalDate startDate, LocalDate endDate) {
 		List<Todo> assignments;
 
-		if (startDate == null) {
-			assignments = todoRepository.findByMenteeIdAndTodoAssignYnAndDeleteYn(menteeId, "Y", "N");
-		} else if (endDate == null) {
-			assignments = todoRepository.findByMenteeIdAndTodoDateAndTodoAssignYnAndDeleteYn(menteeId, startDate, "Y", "N");
+		if(menteeId == null) {
+			assignments = todoRepository.findAllByTodoDateBetweenAndTodoAssignYnAndDeleteYnOrderByMenteeId(startDate, endDate, "Y", "N");
 		} else {
-			assignments = todoRepository.findByMenteeIdAndTodoDateBetweenAndTodoAssignYnAndDeleteYn(menteeId, startDate, endDate, "Y", "N");
+			if (startDate == null) {
+				assignments = todoRepository.findByMenteeIdAndTodoAssignYnAndDeleteYn(menteeId, "Y", "N");
+			} else if (endDate == null) {
+				assignments = todoRepository.findByMenteeIdAndTodoDateAndTodoAssignYnAndDeleteYn(menteeId, startDate, "Y", "N");
+			} else {
+				assignments = todoRepository.findByMenteeIdAndTodoDateBetweenAndTodoAssignYnAndDeleteYn(menteeId, startDate, endDate, "Y", "N");
+			}
 		}
 
 		Set<Long> solutionIds = assignments.stream()

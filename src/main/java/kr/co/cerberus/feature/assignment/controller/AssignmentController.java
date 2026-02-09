@@ -47,7 +47,7 @@ public class AssignmentController {
 	@Operation(summary = "주차별 과제 목록 조회", description = "특정 주차의 월요일 날짜를 기준으로 해당 주(월~일)의 과제 목록을 조회")
 	@GetMapping("/weekly")
 	public ResponseEntity<CommonResponse<List<GroupedAssignmentsResponseDto>>> getAssignmentsWeekly(
-			@Parameter(description = "멘티 ID", example = "2") @RequestParam(value = "menteeId") Long menteeId,
+			@Parameter(description = "멘티 ID", example = "2") @RequestParam(value = "menteeId", required = false) Long menteeId,
 			@Parameter(description = "주차의 월요일 날짜 (YYYY-MM-DD)", example = "2026-02-02") @RequestParam(value = "mondayDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate mondayDate) {
 
 		List<GroupedAssignmentsResponseDto> weeklyAssignments = assignmentService.findAssignmentsWeekly(menteeId, mondayDate);
