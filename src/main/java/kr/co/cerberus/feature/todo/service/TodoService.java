@@ -1,5 +1,7 @@
 package kr.co.cerberus.feature.todo.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.dto.FeedbackDetailResponseDto;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
@@ -9,6 +11,7 @@ import kr.co.cerberus.feature.todo.dto.*;
 import kr.co.cerberus.feature.todo.repository.TodoRepository;
 import kr.co.cerberus.global.error.CustomException;
 import kr.co.cerberus.global.error.ErrorCode;
+import kr.co.cerberus.global.jsonb.FeedbackFileData;
 import kr.co.cerberus.global.jsonb.FileInfo;
 import kr.co.cerberus.global.jsonb.TodoFileData;
 import kr.co.cerberus.global.util.FileStorageService;
@@ -19,7 +22,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -330,4 +336,100 @@ public class TodoService {
 		todo.delete();
 	}
 
+    public TodoTimerDailyResponseDto getTimersByDate(Long menteeId, LocalDate date) {
+
+        LocalDateTime windowStart = date.atTime(LocalTime.of(5, 0));              // 05:00
+        LocalDateTime windowEnd = date.plusDays(1).atTime(LocalTime.of(4, 59));    // 다음날 04:00
+
+        List<Todo> todos = todoRepository.findByMenteeIdAndDeleteYn(menteeId, "N");
+
+        ObjectMapper mapper = new ObjectMapper();
+
+        long totalMinutesAll = 0;
+        long sessionCountAll = 0;
+
+        List<TodoTimerDailyResponseDto.TodoTimerItem> items = new ArrayList<>();
+
+        for (Todo todo : todos) {
+            String timerJson = todo.getTodoTimer();
+            if (timerJson == null || timerJson.isBlank()) continue;
+
+            long todoTotalMinutes = 0;
+            List<TodoTimerDailyResponseDto.TimerSession> sessionDtos = new ArrayList<>();
+
+            try {
+                // todo_timer: [{"startAt":"...","endAt":"..."}]
+                List<Map<String, String>> sessions = mapper.readValue(
+                        timerJson, new TypeReference<List<Map<String, String>>>() {}
+                );
+
+                for (Map<String, String> s : sessions) {
+                    String startStr = s.get("startAt");
+                    String endStr = s.get("endAt");
+                    if (startStr == null || endStr == null) continue;
+
+                    LocalDateTime startAt = LocalDateTime.parse(startStr);
+                    LocalDateTime endAt = LocalDateTime.parse(endStr);
+                    if (endAt.isBefore(startAt)) continue;
+
+                    // ✅ 시간창과 겹치는 세션만 포함 (겹치면 clip해서 계산)
+                    if (!isOverlapping(startAt, endAt, windowStart, windowEnd)) continue;
+
+                    LocalDateTime clippedStart = max(startAt, windowStart);
+                    LocalDateTime clippedEnd = min(endAt, windowEnd);
+
+                    long minutes = Duration.between(clippedStart, clippedEnd).toMinutes();
+                    if (minutes <= 0) continue;
+
+                    sessionDtos.add(TodoTimerDailyResponseDto.TimerSession.builder()
+                            .startAt(clippedStart.toString())
+                            .endAt(clippedEnd.toString())
+                            .minutes(minutes)
+                            .build());
+
+                    todoTotalMinutes += minutes;
+                    totalMinutesAll += minutes;
+                    sessionCountAll++;
+                }
+
+            } catch (Exception e) {
+                throw new RuntimeException("Todo timer JSON 파싱 오류 (todoId=" + todo.getId() + ")", e);
+            }
+
+            if (!sessionDtos.isEmpty()) {
+                items.add(TodoTimerDailyResponseDto.TodoTimerItem.builder()
+                        .todoId(todo.getId())
+                        .title(todo.getTodoName())
+                        .subject(todo.getTodoSubjects())
+                        .totalMinutes(todoTotalMinutes)
+                        .sessions(sessionDtos)
+                        .build());
+            }
+        }
+
+        long averageMinutes = (sessionCountAll == 0) ? 0 : (totalMinutesAll / sessionCountAll);
+
+        return TodoTimerDailyResponseDto.builder()
+                .menteeId(menteeId)
+                .date(date)
+                .totalMinutes(totalMinutesAll)
+                .averageMinutes(averageMinutes)
+                .items(items)
+                .build();
+    }
+
+    // ===== helper =====
+    private boolean isOverlapping(LocalDateTime aStart, LocalDateTime aEnd,
+                                  LocalDateTime bStart, LocalDateTime bEnd) {
+        // [aStart, aEnd) 와 [bStart, bEnd) 가 겹치는지
+        return aStart.isBefore(bEnd) && aEnd.isAfter(bStart);
+    }
+
+    private LocalDateTime max(LocalDateTime a, LocalDateTime b) {
+        return a.isAfter(b) ? a : b;
+    }
+
+    private LocalDateTime min(LocalDateTime a, LocalDateTime b) {
+        return a.isBefore(b) ? a : b;
+    }
 }
