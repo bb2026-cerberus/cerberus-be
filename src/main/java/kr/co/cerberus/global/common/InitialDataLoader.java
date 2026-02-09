@@ -257,7 +257,6 @@ public class InitialDataLoader implements CommandLineRunner {
                 .overallEvaluation("전반적으로 성실하게 학습하였으나, 수학 과목에 보완이 필요합니다.")
                 .strengths("국어와 영어 과목에서 우수한 성과를 보였습니다.")
                 .improvements("수학 개념 이해도를 높이기 위한 추가 학습이 필요합니다.")
-                .reportFile(JsonbUtils.toJson(reportFiles))
                 .build();
         weeklyReportRepository.save(report);
         System.out.println("[InitialData] 멘티(" + menteeId + ") 주간 리포트 생성 완료.");

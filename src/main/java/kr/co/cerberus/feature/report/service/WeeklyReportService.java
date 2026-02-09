@@ -1,6 +1,5 @@
 package kr.co.cerberus.feature.report.service;
 
-import kr.co.cerberus.feature.member.Member;
 import kr.co.cerberus.feature.member.Role;
 import kr.co.cerberus.feature.member.repository.MemberRepository;
 import kr.co.cerberus.feature.report.WeeklyReport;
@@ -10,18 +9,15 @@ import kr.co.cerberus.feature.report.dto.WeeklyReportUpdateRequestDto;
 import kr.co.cerberus.feature.report.repository.WeeklyReportRepository;
 import kr.co.cerberus.feature.relation.Relation;
 import kr.co.cerberus.feature.relation.repository.RelationRepository;
-import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
 import kr.co.cerberus.global.error.CustomException;
 import kr.co.cerberus.global.error.ErrorCode;
 import kr.co.cerberus.global.util.JsonbUtils;
 import kr.co.cerberus.global.jsonb.FeedbackFileData;
-import lombok.RequiredArgsConstructor;
-// import org.springframework.ai.chat.client.ChatClient;
-// import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -32,7 +28,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class WeeklyReportService {
 
@@ -40,10 +35,8 @@ public class WeeklyReportService {
     private final MemberRepository memberRepository;
     private final RelationRepository relationRepository;
     private final FeedbackRepository feedbackRepository;
-    // private final ChatClient chatClient;
+    private final ChatClient chatClient;
 
-    // AI 주석 처리에 따라 생성자 수정
-    /*
     public WeeklyReportService(
             WeeklyReportRepository weeklyReportRepository,
             MemberRepository memberRepository,
@@ -56,7 +49,6 @@ public class WeeklyReportService {
         this.feedbackRepository = feedbackRepository;
         this.chatClient = chatClientBuilder.build();
     }
-    */
 
     @Transactional
     public WeeklyReportResponseDto createWeeklyReport(Long mentorId, WeeklyReportCreateRequestDto requestDto) {
@@ -65,16 +57,27 @@ public class WeeklyReportService {
         }
         validateMentorMenteeRelation(mentorId, requestDto.menteeId());
 
-        WeeklyReport report = WeeklyReport.builder()
-                .menteeId(requestDto.menteeId())
-                .mentorId(mentorId)
-                .reportDate(requestDto.reportDate())
-                .summary(requestDto.summary())
-                .overallEvaluation(requestDto.overallEvaluation())
-                .strengths(requestDto.strengths())
-                .improvements(requestDto.improvements())
-                .reportFile(JsonbUtils.toJson(requestDto.reportFiles()))
-                .build();
+        // 이미 AI 초안이 생성되어 있을 수 있으므로 체크
+        WeeklyReport report = weeklyReportRepository.findByMenteeIdAndReportDate(requestDto.menteeId(), requestDto.reportDate())
+                .map(existing -> {
+                    existing.updateReport(
+                            requestDto.summary(),
+                            requestDto.overallEvaluation(),
+                            requestDto.strengths(),
+                            requestDto.improvements()
+                    );
+                    return existing;
+                })
+                .orElseGet(() -> WeeklyReport.builder()
+                        .menteeId(requestDto.menteeId())
+                        .mentorId(mentorId)
+                        .reportDate(requestDto.reportDate())
+                        .summary(requestDto.summary())
+                        .overallEvaluation(requestDto.overallEvaluation())
+                        .strengths(requestDto.strengths())
+                        .improvements(requestDto.improvements())
+                        .build());
+        
         WeeklyReport savedReport = weeklyReportRepository.save(report);
         return mapToResponseDto(savedReport);
     }
@@ -92,8 +95,7 @@ public class WeeklyReportService {
                 requestDto.summary(),
                 requestDto.overallEvaluation(),
                 requestDto.strengths(),
-                requestDto.improvements(),
-                JsonbUtils.toJson(requestDto.reportFiles())
+                requestDto.improvements()
         );
         return mapToResponseDto(report);
     }
@@ -109,20 +111,27 @@ public class WeeklyReportService {
         report.delete();
     }
 
+    @Transactional
     public WeeklyReportResponseDto getWeeklyReportDetail(Long reportId) {
         WeeklyReport report = weeklyReportRepository.findById(reportId)
                 .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+        
+        // 만약 summary가 비어있다면 AI 요약 재시도 가능
+        if (report.getSummary() == null || report.getSummary().isBlank() || report.getSummary().equals("작성된 요약이 없습니다.")) {
+            return generateAndSaveAiReportDraft(report.getMentorId(), report.getMenteeId(), report.getReportDate());
+        }
+        
         return mapToResponseDto(report);
     }
 
+    @Transactional
     public List<WeeklyReportResponseDto> getMenteesWeeklyReports(Long mentorId, LocalDate mondayDate) {
         List<Long> menteeIds = relationRepository.findByMentorId(mentorId)
                 .stream()
                 .map(Relation::getMenteeId)
-                .collect(Collectors.toList());
+                .toList();
 
         List<WeeklyReportResponseDto> results = new ArrayList<>();
-        LocalDate sundayDate = mondayDate.plusDays(6);
 
         for (Long menteeId : menteeIds) {
             Optional<WeeklyReport> existingReport = weeklyReportRepository.findByMenteeIdAndReportDate(menteeId, mondayDate);
@@ -130,10 +139,64 @@ public class WeeklyReportService {
             if (existingReport.isPresent()) {
                 results.add(mapToResponseDto(existingReport.get()));
             } else {
-                results.add(generateEmptyReportDraft(mentorId, menteeId, mondayDate));
+                results.add(generateAndSaveAiReportDraft(mentorId, menteeId, mondayDate));
             }
         }
         return results;
+    }
+
+    // AI를 이용해 초안 생성 및 즉시 DB 저장
+    @Transactional
+    public WeeklyReportResponseDto generateAndSaveAiReportDraft(Long mentorId, Long menteeId, LocalDate reportDate) {
+        LocalDate endDate = reportDate.plusDays(6);
+        List<kr.co.cerberus.feature.feedback.Feedback> feedbacks = feedbackRepository.findByMenteeIdAndFeedDateBetween(menteeId, reportDate, endDate);
+
+        String feedbackContext = feedbacks.stream()
+                .map(f -> {
+                    FeedbackFileData data = JsonbUtils.fromJson(f.getFeedFile(), FeedbackFileData.class);
+                    return String.format("- [%s] 요약: %s / 상세내용: %s", f.getFeedDate(), data.getSummary(), data.getContent());
+                })
+                .collect(Collectors.joining("\n"));
+
+        String prompt = String.format("""
+                당신은 멘토링 리포트 작성을 돕는 전문 에이전트입니다.
+                다음은 일주일 동안 멘티에게 제공된 피드백 내용들입니다:
+                
+                %s
+                
+                이 내용을 바탕으로 주간 리포트 초안을 작성해주세요.
+                결과는 반드시 JSON 형식으로 반환해야 하며, 다음 키를 포함해야 합니다:
+                - summary: 한 주간의 학습 활동 및 피드백 내용 요약 (3-4문장)
+                - strengths: 멘티가 이번 주에 특히 잘했거나 성장한 부분
+                
+                한국어로 정중하고 격려하는 어조로 작성해주세요.
+                """, feedbackContext.isEmpty() ? "해당 주차에 등록된 피드백이 없습니다." : feedbackContext);
+
+        try {
+            // Spring AI의 entity() 기능을 사용하여 자동으로 JSON 파싱 및 마크다운 제거 처리
+            Map<String, String> aiResponse = chatClient.prompt()
+                    .user(prompt)
+                    .call()
+                    .entity(new ParameterizedTypeReference<>() {});
+
+            String summary = aiResponse.getOrDefault("summary", "이번 주 활동에 대한 요약 데이터가 부족합니다.");
+            String strengths = aiResponse.getOrDefault("strengths", "이번 주 특이사항이 없습니다.");
+
+            WeeklyReport report = weeklyReportRepository.findByMenteeIdAndReportDate(menteeId, reportDate)
+                    .orElseGet(() -> WeeklyReport.builder()
+                            .mentorId(mentorId)
+                            .menteeId(menteeId)
+                            .reportDate(reportDate)
+                            .build());
+
+            report.updateReport(summary, null, strengths, null);
+            WeeklyReport savedReport = weeklyReportRepository.save(report);
+            
+            return mapToResponseDto(savedReport);
+
+        } catch (Exception e) {
+            return generateEmptyReportDraft(mentorId, menteeId, reportDate);
+        }
     }
 
     // AI 대신 빈 초안 반환
@@ -146,7 +209,6 @@ public class WeeklyReportService {
                 .overallEvaluation("작성된 총평이 없습니다.")
                 .strengths("")
                 .improvements("")
-                .reportFiles(List.of())
                 .build();
     }
 
@@ -167,7 +229,6 @@ public class WeeklyReportService {
                 .overallEvaluation(report.getOverallEvaluation())
                 .strengths(report.getStrengths())
                 .improvements(report.getImprovements())
-                .reportFiles(Optional.ofNullable(JsonbUtils.fromJson(report.getReportFile(), new TypeReference<List<kr.co.cerberus.global.jsonb.FileInfo>>() {})).orElse(List.of()))
                 .createDatetime(report.getCreateDatetime())
                 .updateDatetime(report.getUpdateDatetime())
                 .build();
@@ -180,8 +241,8 @@ public class WeeklyReportService {
         if (!memberRepository.findById(menteeId).map(m -> m.getRole() == Role.MENTEE).orElse(false)) {
             throw new CustomException(ErrorCode.INVALID_PARAMETER, "유효하지 않은 멘티 ID입니다.");
         }
-        if (!relationRepository.findByMentorId(mentorId).stream()
-                .anyMatch(r -> r.getMenteeId().equals(menteeId))) {
+        if (relationRepository.findByMentorId(mentorId).stream()
+                .noneMatch(r -> r.getMenteeId().equals(menteeId))) {
             throw new CustomException(ErrorCode.INVALID_PARAMETER, "멘토와 멘티 간의 관계가 존재하지 않습니다.");
         }
     }

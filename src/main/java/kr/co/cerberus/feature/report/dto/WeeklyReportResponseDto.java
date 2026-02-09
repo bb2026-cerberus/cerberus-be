@@ -16,7 +16,6 @@ public record WeeklyReportResponseDto(
     String overallEvaluation,
     String strengths,
     String improvements,
-    List<FileInfo> reportFiles,
     LocalDateTime createDatetime,
     LocalDateTime updateDatetime
 ) {}

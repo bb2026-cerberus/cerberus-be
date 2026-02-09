@@ -1,7 +1,6 @@
 package kr.co.cerberus.feature.report.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.co.cerberus.feature.report.dto.WeeklyReportCreateRequestDto;
 import kr.co.cerberus.feature.report.dto.WeeklyReportResponseDto;
