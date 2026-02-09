@@ -1,5 +1,6 @@
 package kr.co.cerberus.feature.todo.service;
 
+import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
 import kr.co.cerberus.feature.solution.service.SolutionService;
 import kr.co.cerberus.feature.todo.Todo;
@@ -7,7 +8,6 @@ import kr.co.cerberus.feature.todo.dto.*;
 import kr.co.cerberus.feature.todo.repository.TodoRepository;
 import kr.co.cerberus.global.error.CustomException;
 import kr.co.cerberus.global.error.ErrorCode;
-import kr.co.cerberus.global.jsonb.FeedbackFileData;
 import kr.co.cerberus.global.jsonb.FileInfo;
 import kr.co.cerberus.global.jsonb.TodoFileData;
 import kr.co.cerberus.global.util.FileStorageService;
@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -35,19 +36,51 @@ public class TodoService {
 		List<Todo> todos;
 
 		if (startDate == null) {
-			todos = todoRepository.findByMenteeIdAndTodoAssignYnAndDeleteYn(menteeId, "N", "N");
+			todos = todoRepository.findByMenteeIdAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeId, "N", "N", "N");
 		} else if (endDate == null) {
-			todos = todoRepository.findByMenteeIdAndTodoDateAndTodoAssignYnAndDeleteYn(menteeId, startDate, "N", "N");
+			todos = todoRepository.findByMenteeIdAndTodoDateAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeId, startDate, "N", "N", "N");
 		} else {
-			todos = todoRepository.findByMenteeIdAndTodoDateBetweenAndTodoAssignYnAndDeleteYn(menteeId, startDate, endDate, "N", "N");
+			todos = todoRepository.findByMenteeIdAndTodoDateBetweenAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeId, startDate, endDate, "N", "N", "N");
 		}
+
+		// N+1 최적화: 필요한 Solution ID들을 수집하여 한 번에 조회
+		Set<Long> solutionIds = todos.stream()
+				.map(Todo::getSolutionId)
+				.filter(java.util.Objects::nonNull)
+				.collect(Collectors.toSet());
+
+		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionContent(solutionIds);
+
+		todos.sort(Comparator.comparing(Todo::getTodoDate).reversed());
+		Map<LocalDate, List<TodoListResponseDto>> groupedTodos = todos.stream()
+				.map(todo -> TodoListResponseDto.builder()
+						.todoId(todo.getId())
+						.title(todo.getTodoName())
+						.subject(todo.getTodoSubjects())
+						.solution(solutionTitleMap.get(todo.getSolutionId()))
+						.date(todo.getTodoDate())
+						.completed("Y".equals(todo.getTodoCompleteYn()))
+						.build())
+				.collect(Collectors.groupingBy(TodoListResponseDto::getDate, TreeMap::new, Collectors.toList()));
+
+		return groupedTodos.entrySet().stream()
+				.map(entry -> GroupedTodosResponseDto.builder()
+						.date(entry.getKey())
+						.todos(entry.getValue())
+						.build())
+				.toList();
+	}
+
+	public List<GroupedTodosResponseDto> findDraftTodos(Long menteeId) {
+		// TODO: 보안 - 현재 로그인한 사용자가 요청한 menteeId에 접근 권한이 있는지 검증 필요
+		List<Todo> todos = todoRepository.findByMenteeIdAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeId, "N", "N", "Y");
 
 		Set<Long> solutionIds = todos.stream()
 				.map(Todo::getSolutionId)
 				.filter(java.util.Objects::nonNull)
 				.collect(Collectors.toSet());
 
-		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionTitle(solutionIds);
+		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionContent(solutionIds);
 
 		todos.sort(Comparator.comparing(Todo::getTodoDate).reversed());
 		Map<LocalDate, List<TodoListResponseDto>> groupedTodos = todos.stream()
@@ -70,7 +103,7 @@ public class TodoService {
 	}
 
 	public List<GroupedTodosResponseDto> findTodosWeekly(Long menteeId, LocalDate mondayDate) {
-		LocalDate startDate = mondayDate;
+		LocalDate startDate = mondayDate.with(DayOfWeek.MONDAY);
 		LocalDate endDate = mondayDate.plusDays(6);
 		return findTodos(menteeId, startDate, endDate);
 	}
@@ -83,7 +116,7 @@ public class TodoService {
 		List<FileInfo> solutionWorkbooks = solutionService.parseSolutionFiles(todo.getSolutionId());
 
 		String feedbackContent = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N")
-				.map(kr.co.cerberus.feature.feedback.Feedback::getContent)
+				.map(Feedback::getContent)
 				.orElse(null);
 
 		TodoFileData todoFileData = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
@@ -118,6 +151,34 @@ public class TodoService {
 				.solutionId(request.getSolutionId())
 				.todoAssignYn("N")
 				.todoCompleteYn("N")
+				.todoDraftYn("N")
+				.build();
+
+		Todo saved = todoRepository.save(todo);
+
+		return TodoCreateResponseDto.builder()
+				.todoId(saved.getId())
+				.title(saved.getTodoName())
+				.content(saved.getTodoNote())
+				.subject(saved.getTodoSubjects())
+				.solution(solutionService.getSolutionTitleById(saved.getSolutionId()))
+				.date(saved.getTodoDate())
+				.completed("Y".equals(saved.getTodoCompleteYn()))
+				.build();
+	}
+
+	@Transactional
+	public TodoCreateResponseDto createDraftTodo(TodoCreateRequestDto request) {
+		Todo todo = Todo.builder()
+				.menteeId(request.getMenteeId())
+				.todoSubjects(request.getSubject().getDescription())
+				.todoName(request.getTitle())
+				.todoNote(request.getContent())
+				.todoDate(request.getDate())
+				.solutionId(request.getSolutionId())
+				.todoAssignYn("N")
+				.todoCompleteYn("N")
+				.todoDraftYn("Y")
 				.build();
 
 		Todo saved = todoRepository.save(todo);
@@ -138,6 +199,11 @@ public class TodoService {
 		Todo todo = todoRepository.findById(todoId)
 				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 		todo.toggleComplete();
+	}
+	
+	public void markComplete(Long todoId) {
+		Todo todo = findById(todoId);
+		todo.markComplete();
 	}
 
 	@Transactional
@@ -164,4 +230,92 @@ public class TodoService {
 				.imageUrls(imageUrls)
 				.build();
 	}
+
+	@Transactional
+	public VerificationResponseDto updateVerification(Long todoId, List<MultipartFile> images) {
+		Todo todo = findById(todoId);
+
+		// 피드백 존재 시 인증사진 수정 불가
+		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N");
+		if (feedback.isPresent()) {
+			throw new CustomException(ErrorCode.INVALID_PARAMETER, "피드백이 등록되어 수정이 불가합니다.");
+		}
+
+		// 모든 새 파일 저장
+		List<FileInfo> fileInfos = images.stream()
+				.map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "todos"), null))
+				.toList();
+
+		// todoFile JSONB 업데이트
+		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
+		TodoFileData updated = (existing != null)
+				? existing.updateVerificationImages(fileInfos)
+				: TodoFileData.withVerificationImages(fileInfos);
+
+		todo.updateTodoFile(JsonbUtils.toJson(updated));
+
+		List<String> imageUrls = fileInfos.stream()
+				.map(FileInfo::getFileUrl)
+				.toList();
+
+		return VerificationResponseDto.builder()
+				.imageUrls(imageUrls)
+				.build();
+	}
+
+	@Transactional
+	public VerificationResponseDto deleteVerificationImage(Long todoId) {
+		Todo todo = findById(todoId);
+
+		// 피드백 존재 시 인증사진 삭제 불가
+		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N");
+		if (feedback.isPresent()) {
+			throw new CustomException(ErrorCode.INVALID_PARAMETER, "피드백이 등록되어 삭제가 불가합니다.");
+		}
+
+		// todoFile JSONB 파싱 -> 인증 사진 URL을 null로 설정
+		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
+		TodoFileData updated = (existing != null)
+				? existing.updateVerificationImages(Collections.emptyList())
+				: TodoFileData.withVerificationImages(Collections.emptyList());
+		todo.updateTodoFile(JsonbUtils.toJson(updated));
+
+		return VerificationResponseDto.builder()
+				.imageUrls(null)
+				.build();
+	}
+
+	private Todo findById(Long id) {
+		Todo todo = todoRepository.findById(id)
+				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+
+		if ("Y".equals(todo.getTodoAssignYn())) {
+			throw new CustomException(ErrorCode.RESOURCE_NOT_FOUND);
+		}
+		return todo;
+	}
+
+    @Transactional
+    public void addTimerSession(Long todoId, TodoTimerSessionCreateRequestDto request) {
+        Todo todo = findById(todoId);
+
+        if (request.getEndAt().isBefore(request.getStartAt())) {
+            throw new CustomException(ErrorCode.INVALID_PARAMETER, "종료 시간이 시작 시간보다 빠릅니다.");
+        }
+
+        todo.addTimerSession(request.getStartAt(), request.getEndAt());
+    }
+
+	@Transactional
+	public void deleteDraftTodo(Long todoId) {
+		Todo todo = findById(todoId);
+
+		// 임시저장 상태인지 확인
+		if (!"Y".equals(todo.getTodoDraftYn())) {
+			throw new CustomException(ErrorCode.INVALID_PARAMETER);
+		}
+
+		todo.delete();
+	}
+
 }

@@ -31,7 +31,7 @@ import java.nio.charset.StandardCharsets;
 public class AssignmentController {
 
 	private final AssignmentService assignmentService;
-	private final FileStorageService fileStorageService; // FileStorageService 주입
+	private final FileStorageService fileStorageService;
 
 	@Operation(summary = "과제 목록 조회", description = "전체/기간별/일별 과제 목록을 조회합니다. startDate만 있으면 일별, startDate+endDate는 기간별, 둘 다 없으면 전체 조회")
 	@GetMapping

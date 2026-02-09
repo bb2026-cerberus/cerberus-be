@@ -6,9 +6,9 @@ import java.util.List;
 
 public record SolutionResponseDto(
     Long id,
+    Long menteeId,
     Long mentorId,
-    String title,
-    String description,
+	String solutionContent,
     String subject,
     List<FileInfo> solutionFiles,
     LocalDateTime createDatetime,

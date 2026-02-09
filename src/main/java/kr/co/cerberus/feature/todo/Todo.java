@@ -1,5 +1,7 @@
 package kr.co.cerberus.feature.todo;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
 import kr.co.cerberus.global.entity.BaseEntity;
 import lombok.AllArgsConstructor;
@@ -12,6 +14,10 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Getter
 @Entity
@@ -69,13 +75,42 @@ public class Todo extends BaseEntity {
 	@Column(name = "todo_end_dt")
 	private LocalDateTime todoEndDt;
 
-	public void toggleComplete() {
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "todo_timer", columnDefinition = "jsonb")
+    private String todoTimer;
+
+    public void addTimerSession(LocalDateTime startAt, LocalDateTime endAt) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+
+            List<Map<String, Object>> sessions;
+            if (this.todoTimer == null || this.todoTimer.isBlank()) {
+                sessions = new ArrayList<>();
+            } else {
+                sessions = mapper.readValue(this.todoTimer,
+                        new TypeReference<List<Map<String, Object>>>() {});
+            }
+
+            Map<String, Object> session = new HashMap<>();
+            session.put("startAt", startAt.toString()); // ✅ 문자열로
+            session.put("endAt", endAt.toString());     // ✅ 문자열로
+
+            sessions.add(session);
+
+            this.todoTimer = mapper.writeValueAsString(sessions);
+
+        } catch (Exception e) {
+            throw new RuntimeException("Todo timer JSON 처리 중 오류", e);
+        }
+    }
+
+
+    public void toggleComplete() {
 		this.todoCompleteYn = "Y".equals(this.todoCompleteYn) ? "N" : "Y";
 	}
 
 	public void markComplete() {
 		this.todoCompleteYn = "Y";
-		this.todoDraftYn = "Y";
 	}
 
 	public void updateTodoFile(String todoFile) {
@@ -88,13 +123,11 @@ public class Todo extends BaseEntity {
 
 	// 임시저장 상태로 설정
 	public void markAsDraft() {
-		this.todoDraftYn = "N";
-		this.todoAssignYn = "N";
+		this.todoDraftYn = "Y";
 	}
 
 	// 과제 할당 상태로 설정
 	public void assign() {
 		this.todoAssignYn = "Y";
-		this.todoDraftYn = "Y";
 	}
 }

@@ -1,13 +1,12 @@
-package kr.co.cerberus.feature.weakness.controller;
+package kr.co.cerberus.feature.solution.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import kr.co.cerberus.feature.weakness.dto.WeaknessSolutionCreateRequestDto;
-import kr.co.cerberus.feature.weakness.dto.WeaknessSolutionResponseDto;
-import kr.co.cerberus.feature.weakness.dto.WeaknessSolutionUpdateRequestDto;
-import kr.co.cerberus.feature.weakness.service.WeaknessSolutionService;
+import kr.co.cerberus.feature.solution.dto.SolutionCreateRequestDto;
+import kr.co.cerberus.feature.solution.dto.SolutionResponseDto;
+import kr.co.cerberus.feature.solution.dto.SolutionUpdateRequestDto;
+import kr.co.cerberus.feature.solution.service.SolutionService;
 import kr.co.cerberus.global.common.CommonResponse;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,28 +20,31 @@ import java.util.List;
 @Tag(name = "Mentor Weakness Solution Management", description = "멘토의 약점 맞춤 솔루션 관리 API")
 @RestController
 @RequestMapping("/api/mentors/weakness-solutions")
-@RequiredArgsConstructor
-public class MentorWeaknessSolutionController {
+public class SolutionController {
 
-    private final WeaknessSolutionService weaknessSolutionService;
-
-    @Operation(summary = "약점 솔루션 생성", description = "멘토가 멘티에 대한 약점 맞춤 솔루션을 생성합니다.")
+    private final SolutionService solutionService;
+	
+	public SolutionController(SolutionService solutionService) {
+		this.solutionService = solutionService;
+	}
+	
+	@Operation(summary = "약점 솔루션 생성", description = "멘토가 멘티에 대한 약점 맞춤 솔루션을 생성합니다.")
     @PostMapping(value = "/{mentorId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<CommonResponse<WeaknessSolutionResponseDto>> createWeaknessSolution(
+    public ResponseEntity<CommonResponse<SolutionResponseDto>> createWeaknessSolution(
             @PathVariable Long mentorId,
-            @Valid @RequestPart("request") WeaknessSolutionCreateRequestDto requestDto,
+            @Valid @RequestPart("request") SolutionCreateRequestDto requestDto,
             @RequestPart(value = "file", required = false) MultipartFile file) {
-        WeaknessSolutionResponseDto response = weaknessSolutionService.createWeaknessSolution(mentorId, requestDto, file);
+        SolutionResponseDto response = solutionService.createSolution(mentorId, requestDto, file);
         return ResponseEntity.status(HttpStatus.CREATED).body(CommonResponse.of(response));
     }
 
     @Operation(summary = "약점 솔루션 수정", description = "멘토가 등록된 약점 맞춤 솔루션을 수정합니다.")
     @PutMapping(value = "/{mentorId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<CommonResponse<WeaknessSolutionResponseDto>> updateWeaknessSolution(
+    public ResponseEntity<CommonResponse<SolutionResponseDto>> updateWeaknessSolution(
             @PathVariable Long mentorId,
-            @Valid @RequestPart("request") WeaknessSolutionUpdateRequestDto requestDto,
-            @RequestPart(value = "files", required = false) List<MultipartFile> files) {
-        WeaknessSolutionResponseDto response = weaknessSolutionService.updateWeaknessSolution(mentorId, requestDto, files);
+            @Valid @RequestPart("request") SolutionUpdateRequestDto requestDto,
+            @RequestPart(value = "files", required = false) MultipartFile file) {
+        SolutionResponseDto response = solutionService.updateSolution(mentorId, requestDto, file);
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 
@@ -51,16 +53,16 @@ public class MentorWeaknessSolutionController {
     public ResponseEntity<CommonResponse<Void>> deleteWeaknessSolution(
             @PathVariable Long mentorId,
             @PathVariable Long weaknessSolutionId) {
-        weaknessSolutionService.deleteWeaknessSolution(mentorId, weaknessSolutionId);
+        solutionService.deleteWeaknessSolution(mentorId, weaknessSolutionId);
         return ResponseEntity.ok(CommonResponse.of(null));
     }
 
     @Operation(summary = "멘토의 약점 솔루션 목록 조회", description = "멘토가 관리하는 특정 멘티의 솔루션 목록을 조회하거나, menteeId가 없으면 멘토가 등록한 모든 솔루션을 조회합니다.")
     @GetMapping("/by-mentor/{mentorId}")
-    public ResponseEntity<CommonResponse<List<WeaknessSolutionResponseDto>>> getWeaknessSolutionsByMentor(
+    public ResponseEntity<CommonResponse<List<SolutionResponseDto>>> getWeaknessSolutionsByMentor(
             @PathVariable Long mentorId,
             @RequestParam(value = "menteeId", required = false) Long menteeId) {
-        List<WeaknessSolutionResponseDto> response = weaknessSolutionService.getWeaknessSolutionsByMentorAndMentee(mentorId, menteeId);
+        List<SolutionResponseDto> response = solutionService.getWeaknessSolutionsByMentorAndMentee(mentorId, menteeId);
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 }

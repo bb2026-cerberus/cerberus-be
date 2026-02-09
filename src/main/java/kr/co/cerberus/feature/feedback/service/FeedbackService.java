@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.MimeTypeUtils;
 
 import java.net.URI;
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.WeekFields;
 import java.util.*;
@@ -195,7 +196,7 @@ public class FeedbackService {
      * 주간 피드백 목록 조회
      */
     public FeedbackWeeklyResponseDto getWeeklyFeedbacks(Long mentorId, Long menteeId, LocalDate date, String type) {
-        LocalDate mondayDate = date.with(java.time.DayOfWeek.MONDAY);
+        LocalDate mondayDate = date.with(DayOfWeek.MONDAY);
         LocalDate sundayDate = mondayDate.plusDays(6);
         
         List<Long> targetMenteeIds = (menteeId != null) 

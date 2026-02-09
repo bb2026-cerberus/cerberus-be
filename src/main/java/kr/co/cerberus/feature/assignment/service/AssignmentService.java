@@ -2,14 +2,15 @@ package kr.co.cerberus.feature.assignment.service;
 
 import kr.co.cerberus.feature.assignment.dto.AssignmentDetailResponseDto;
 import kr.co.cerberus.feature.assignment.dto.AssignmentListResponseDto;
+import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
+import kr.co.cerberus.feature.report.service.WeeklyReportService;
 import kr.co.cerberus.feature.solution.service.SolutionService;
 import kr.co.cerberus.feature.todo.Todo;
 import kr.co.cerberus.feature.todo.dto.VerificationResponseDto;
 import kr.co.cerberus.feature.todo.repository.TodoRepository;
 import kr.co.cerberus.global.error.CustomException;
 import kr.co.cerberus.global.error.ErrorCode;
-import kr.co.cerberus.global.jsonb.FeedbackFileData;
 import kr.co.cerberus.global.jsonb.FileInfo;
 import kr.co.cerberus.global.jsonb.TodoFileData;
 import kr.co.cerberus.global.util.FileStorageService;
@@ -21,14 +22,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import kr.co.cerberus.feature.assignment.dto.GroupedAssignmentsResponseDto;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.Comparator;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.Set;
 
 @Service
 @Transactional(readOnly = true)
@@ -39,7 +36,8 @@ public class AssignmentService {
 	private final FeedbackRepository feedbackRepository;
 	private final SolutionService solutionService;
 	private final FileStorageService fileStorageService;
-
+	private final WeeklyReportService weeklyReportService;
+	
 	public List<GroupedAssignmentsResponseDto> findAssignments(Long menteeId, LocalDate startDate, LocalDate endDate) {
 		List<Todo> assignments;
 
@@ -56,7 +54,7 @@ public class AssignmentService {
 				.filter(java.util.Objects::nonNull)
 				.collect(Collectors.toSet());
 
-		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionTitle(solutionIds);
+		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionContent(solutionIds);
 
         assignments.sort(Comparator.comparing(Todo::getTodoDate).reversed());
 		Map<LocalDate, List<AssignmentListResponseDto>> groupedAssignments = assignments.stream()
@@ -79,7 +77,7 @@ public class AssignmentService {
 	}
 
 	public List<GroupedAssignmentsResponseDto> findAssignmentsWeekly(Long menteeId, LocalDate mondayDate) {
-		LocalDate startDate = mondayDate;
+		LocalDate startDate = mondayDate.with(DayOfWeek.MONDAY);
 		LocalDate endDate = mondayDate.plusDays(6);
 		return findAssignments(menteeId, startDate, endDate);
 	}
@@ -102,7 +100,7 @@ public class AssignmentService {
 		}
 
 		String feedbackContent = feedbackRepository.findByTodoIdAndDeleteYn(assignmentId, "N")
-				.map(kr.co.cerberus.feature.feedback.Feedback::getContent)
+				.map(Feedback::getContent)
 				.orElse(null);
 
 		List<FileInfo> verificationImages = Collections.emptyList();
@@ -155,6 +153,13 @@ public class AssignmentService {
 		Todo todo = todoRepository.findById(assignmentId)
 				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
+		// 피드백 존재 시 인증사진 수정 불가
+		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYn(assignmentId, "N");
+		if (feedback.isPresent()) {
+			throw new CustomException(ErrorCode.INVALID_PARAMETER);
+		}
+
+		// 모든 새 파일 저장
 		List<FileInfo> fileInfos = images.stream()
 				.map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "assignments"), null))
 				.toList();
@@ -180,6 +185,13 @@ public class AssignmentService {
 		Todo todo = todoRepository.findById(assignmentId)
 				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
+		// 피드백 존재 시 인증사진 삭제 불가
+		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYn(assignmentId, "N");
+		if (feedback.isPresent()) {
+			throw new CustomException(ErrorCode.INVALID_PARAMETER);
+		}
+
+		// todoFile JSONB 파싱 -> 인증 사진 URL을 null로 설정
 		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 		TodoFileData updated = (existing != null)
 				? existing.updateVerificationImages(Collections.emptyList())

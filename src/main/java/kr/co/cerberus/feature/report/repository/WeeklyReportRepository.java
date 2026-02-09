@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface WeeklyReportRepository extends JpaRepository<WeeklyReport, Long> {
     List<WeeklyReport> findByMenteeId(Long menteeId);
     Optional<WeeklyReport> findByMenteeIdAndReportDate(Long menteeId, LocalDate reportDate);
+	WeeklyReport findByMenteeIdAndReportDateBetween(Long menteeId, LocalDate startDate, LocalDate endDate);
 }

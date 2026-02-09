@@ -100,7 +100,7 @@ public class MentorService {
                         qna.getId(),
                         qna.getMenteeId(),
                         menteeNames.getOrDefault(qna.getMenteeId(), "알 수 없는 멘티"),
-                        qna.getTitle(),
+//                        qna.getTitle(),
                         "Y".equals(qna.getQnaCompleteYn()) ? "ANSWERED" : "PENDING",
                         qna.getCreateDatetime()
                 ))

@@ -15,8 +15,6 @@ import kr.co.cerberus.feature.solution.Solution;
 import kr.co.cerberus.feature.solution.repository.SolutionRepository;
 import kr.co.cerberus.feature.todo.Todo;
 import kr.co.cerberus.feature.todo.repository.TodoRepository;
-import kr.co.cerberus.feature.weakness.WeaknessSolution;
-import kr.co.cerberus.feature.weakness.repository.WeaknessSolutionRepository;
 import kr.co.cerberus.global.jsonb.FileInfo;
 import kr.co.cerberus.global.jsonb.TodoFileData;
 import kr.co.cerberus.global.util.JsonbUtils;
@@ -42,7 +40,6 @@ public class InitialDataLoader implements CommandLineRunner {
     private final FeedbackRepository feedbackRepository;
     private final QnaRepository qnaRepository;
     private final WeeklyReportRepository weeklyReportRepository;
-    private final WeaknessSolutionRepository weaknessSolutionRepository;
 
     private static final LocalDate START_DATE = LocalDate.of(2026, 2, 1);
     private static final LocalDate TODAY = LocalDate.now();
@@ -50,37 +47,34 @@ public class InitialDataLoader implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        // 1. 회원 (멘토, 멘티) 생성
+        // 회원 (멘토, 멘티) 생성 (고정)
         Member mentor01 = createMemberIfNotFound("mentor01", "김선생", "1234", Role.MENTOR);
         Member mentee01 = createMemberIfNotFound("mentee01", "최학생", "1234", Role.MENTEE);
         Member mentee02 = createMemberIfNotFound("mentee02", "박학생", "1234", Role.MENTEE);
 
-        // 2. Relation 생성: mentor01과 mentee01, mentee02 연결
+        // Relation 생성: mentor01과 mentee01, mentee02 연결 (고정)
         createRelationIfNotFound(mentor01.getId(), mentee01.getId());
         createRelationIfNotFound(mentor01.getId(), mentee02.getId());
 
-        // 3. Solution (학습지) 생성
-        List<Solution> solutions = createSolutions(mentor01.getId());
+        // Solution (학습지) 생성
+	    List<Solution> solutions = createSolutions(mentor01.getId(), mentee01.getId());
+	    solutions.addAll(createSolutions(mentor01.getId(), mentee02.getId()));
 
-        // 4. Assignment/Todo 생성
+        // Assignment/Todo 생성
         List<Todo> mentee01Todos = createAssignments(mentee01.getId(), mentor01.getId(), solutions);
         List<Todo> mentee02Todos = createAssignments(mentee02.getId(), mentor01.getId(), solutions);
 
-        // 5. Feedback 생성
+        // Feedback 생성
         createFeedbacks(mentor01.getId(), mentee01Todos);
         createFeedbacks(mentor01.getId(), mentee02Todos);
 
-        // 6. Q&A 생성
+        // Q&A 생성
         createQnas(mentor01.getId(), mentee01.getId());
         createQnas(mentor01.getId(), mentee02.getId());
 
-        // 7. WeeklyReport 생성 (지난주: 2026-02-02 월요일 시작 주)
+        // WeeklyReport 생성 (지난주: 2026-02-02 월요일 시작 주)
         createWeeklyReports(mentor01.getId(), mentee01.getId(), LocalDate.of(2026, 2, 2));
         createWeeklyReports(mentor01.getId(), mentee02.getId(), LocalDate.of(2026, 2, 2));
-
-        // 8. WeaknessSolution 생성
-        createWeaknessSolutions(mentor01.getId(), mentee01.getId());
-        createWeaknessSolutions(mentor01.getId(), mentee02.getId());
 
         System.out.println("[InitialData] 모든 초기 데이터 생성 완료.");
     }
@@ -110,30 +104,6 @@ public class InitialDataLoader implements CommandLineRunner {
             relationRepository.save(relation);
             System.out.println("[InitialData] 멘토(" + mentorId + ") - 멘티(" + menteeId + ") 관계 생성 완료.");
         }
-    }
-
-    private List<Solution> createSolutions(Long mentorId) {
-        List<Solution> solutions = new ArrayList<>();
-        String[] subjects = {"국어", "영어", "수학"};
-
-        for (String subject : subjects) {
-            for (int i = 1; i <= 5; i++) {
-                List<FileInfo> files = List.of(
-                        createFileInfo("solution_" + subject + "_" + i + "_file1.pdf", "/solutions/" + subject + "/" + i + "/file1.pdf", "메인 학습 자료"),
-                        createFileInfo("solution_" + subject + "_" + i + "_file2.jpg", "/solutions/" + subject + "/" + i + "/file2.jpg", "참고 이미지")
-                );
-                Solution solution = Solution.builder()
-                        .mentorId(mentorId)
-                        .title(subject + " 기본 개념 학습지 " + i)
-                        .description(subject + " 과목의 기본 개념을 다지는 학습지 솔루션입니다.")
-                        .subject(subject)
-                        .solutionFile(JsonbUtils.toJson(files))
-                        .build();
-                solutions.add(solutionRepository.save(solution));
-            }
-        }
-        System.out.println("[InitialData] 솔루션 " + solutions.size() + "개 생성 완료.");
-        return solutions;
     }
 
     private List<Todo> createAssignments(Long menteeId, Long mentorId, List<Solution> solutions) {
@@ -224,7 +194,7 @@ public class InitialDataLoader implements CommandLineRunner {
             Qna qna = Qna.builder()
                     .menteeId(menteeId)
                     .mentorId(mentorId)
-                    .title("Q&A 질문 " + i + "입니다.")
+                    .qnaDate(LocalDate.now().minusDays(i))
                     .questionContent("멘티가 묻습니다: " + i + "번째 질문 내용입니다.")
                     .qnaFile(JsonbUtils.toJson(qnaFiles))
                     .qnaCompleteYn("N")
@@ -258,7 +228,8 @@ public class InitialDataLoader implements CommandLineRunner {
         return new FileInfo(fileName, fileUrl, description);
     }
 
-    private void createWeaknessSolutions(Long mentorId, Long menteeId) {
+    private List<Solution> createSolutions(Long mentorId, Long menteeId) {
+		List<Solution> solutions = new ArrayList<>();
         Random random = new Random();
         String[] subjects = {"국어", "영어", "수학"};
         for (int i = 1; i <= 3; i++) {
@@ -267,16 +238,18 @@ public class InitialDataLoader implements CommandLineRunner {
                     createFileInfo("weakness_solution_" + menteeId + "_" + i + "_file1.pdf", "/weakness_solutions/" + menteeId + "/" + i + "/file1.pdf", "약점 분석 자료"),
                     createFileInfo("weakness_solution_" + menteeId + "_" + i + "_file2.jpg", "/weakness_solutions/" + menteeId + "/" + i + "/file2.jpg", "보완 학습 자료")
             );
-            WeaknessSolution weaknessSolution = WeaknessSolution.builder()
+            Solution solution = Solution.builder()
                     .menteeId(menteeId)
                     .mentorId(mentorId)
                     .subject(subject)
-                    .weaknessDescription(subject + " 약점 " + i + " 분석: " + subject + " 기본 개념 부족")
                     .solutionContent(subject + " 약점 " + i + " 솔루션: 관련 문제 풀이 및 개념 복습")
                     .solutionFile(JsonbUtils.toJson(files))
                     .build();
-            weaknessSolutionRepository.save(weaknessSolution);
+            solutionRepository.save(solution);
+			
+			solutions.add(solution);
         }
         System.out.println("[InitialData] 멘티(" + menteeId + ") 약점 솔루션 3개 생성 완료.");
+		return solutions;
     }
 }
