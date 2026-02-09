@@ -1,10 +1,11 @@
 package kr.co.cerberus.feature.assignment.service;
 
-import kr.co.cerberus.feature.assignment.dto.AssignmentDetailResponseDto;
-import kr.co.cerberus.feature.assignment.dto.AssignmentListResponseDto;
+import kr.co.cerberus.feature.assignment.dto.*;
 import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.dto.FeedbackDetailResponseDto;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
+import kr.co.cerberus.feature.solution.Solution;
+import kr.co.cerberus.feature.solution.repository.SolutionRepository;
 import kr.co.cerberus.feature.solution.service.SolutionService;
 import kr.co.cerberus.feature.todo.Todo;
 import kr.co.cerberus.feature.todo.dto.VerificationResponseDto;
@@ -20,8 +21,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import kr.co.cerberus.feature.assignment.dto.GroupedAssignmentsResponseDto;
-
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
@@ -34,9 +33,10 @@ public class AssignmentService {
 
 	private final TodoRepository todoRepository;
 	private final FeedbackRepository feedbackRepository;
+	private final SolutionRepository solutionRepository;
 	private final SolutionService solutionService;
 	private final FileStorageService fileStorageService;
-	
+
 	public List<GroupedAssignmentsResponseDto> findAssignments(Long menteeId, LocalDate startDate, LocalDate endDate) {
 		List<Todo> assignments;
 
@@ -83,6 +83,77 @@ public class AssignmentService {
 		LocalDate startDate = mondayDate.with(DayOfWeek.MONDAY);
 		LocalDate endDate = mondayDate.plusDays(6);
 		return findAssignments(menteeId, startDate, endDate);
+	}
+
+	/**
+	 * todoId를 통해 menteeId를 찾고, 해당 멘티의 모든 솔루션 목록을 반환합니다.
+	 */
+	public List<MentorSolutionResponseDto> findSolutionsByTodoId(Long todoId) {
+		Todo todo = todoRepository.findById(todoId)
+				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+
+		List<Solution> solutions = solutionRepository.findByMenteeId(todo.getMenteeId());
+
+		return solutions.stream()
+				.map(solution -> {
+					String fileJson = solution.getSolutionFile();
+					FileInfo file = null;
+					
+					if (fileJson != null && !fileJson.isBlank()) {
+						try {
+							if (fileJson.trim().startsWith("[")) {
+								// 리스트 형태인 경우 (하위 호환성)
+								List<FileInfo> files = JsonbUtils.fromJson(fileJson, new com.fasterxml.jackson.core.type.TypeReference<List<FileInfo>>() {});
+								if (files != null && !files.isEmpty()) {
+									file = files.get(0);
+								}
+							} else {
+								// 단일 객체 형태
+								file = JsonbUtils.fromJson(fileJson, FileInfo.class);
+							}
+						} catch (Exception e) {
+							// 역직렬화 실패 시 null 처리하여 전체 조회가 실패하지 않도록 함
+						}
+					}
+
+					String fileName = (file != null) ? file.getFileName() : null;
+					String fileUrl = (file != null) ? file.getFileUrl() : null;
+					return new MentorSolutionResponseDto(solution.getId(), solution.getSolutionContent(), fileName, fileUrl);
+				})
+				.toList();
+	}
+
+	/**
+	 * 멘토가 과제를 생성합니다. (다수 날짜 처리 및 학습지 업로드 포함)
+	 */
+	@Transactional
+	public void createAssignmentByMentor(MentorAssignmentCreateRequestDto request, List<MultipartFile> workbooks) {
+		List<FileInfo> workbookInfos = new ArrayList<>();
+		if (workbooks != null && !workbooks.isEmpty()) {
+			workbookInfos = workbooks.stream()
+					.map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "assignments"), null))
+					.toList();
+		}
+
+		String todoFileJson = JsonbUtils.toJson(TodoFileData.withWorkbooks(workbookInfos));
+		String draftYn = Boolean.TRUE.equals(request.isDraft()) ? "Y" : "N";
+
+		for (LocalDate date : request.dates()) {
+			Todo assignment = Todo.builder()
+					.menteeId(request.menteeId())
+					.todoDate(date)
+					.todoName(request.title())
+					.todoNote(request.content())
+					.todoSubjects(request.subject().getDescription())
+					.solutionId(request.solutionId())
+					.todoFile(todoFileJson)
+					.todoAssignYn("Y")
+					.todoCompleteYn("N")
+					.todoDraftYn(draftYn)
+					.build();
+
+			todoRepository.save(assignment);
+		}
 	}
 
 	public AssignmentDetailResponseDto findAssignmentDetail(Long assignmentId) {

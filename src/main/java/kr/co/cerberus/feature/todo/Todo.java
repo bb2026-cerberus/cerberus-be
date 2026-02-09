@@ -35,9 +35,6 @@ public class Todo extends BaseEntity {
 	@Column(name = "mentee_seq", nullable = false)
 	private Long menteeId;
 
-	@Column(name = "goal_seq")
-	private Long goalId;
-
 	@Column(name = "solution_seq")
 	private Long solutionId;
 

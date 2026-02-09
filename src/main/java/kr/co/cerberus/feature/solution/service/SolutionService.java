@@ -113,13 +113,28 @@ public class SolutionService {
     }
 
     private SolutionResponseDto mapToResponseDto(Solution solution) {
+        FileInfo fileInfo = null;
+        String fileJson = solution.getSolutionFile();
+        if (fileJson != null && !fileJson.isBlank()) {
+            try {
+                if (fileJson.trim().startsWith("[")) {
+                    List<FileInfo> files = JsonbUtils.fromJson(fileJson, new TypeReference<List<FileInfo>>() {});
+                    if (files != null && !files.isEmpty()) fileInfo = files.get(0);
+                } else {
+                    fileInfo = JsonbUtils.fromJson(fileJson, FileInfo.class);
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+
         return new SolutionResponseDto(
                 solution.getId(),
                 solution.getMenteeId(),
                 solution.getMentorId(),
-		        solution.getSolutionContent(),
+                solution.getSolutionContent(),
                 solution.getSubject(),
-                Optional.ofNullable(JsonbUtils.fromJson(solution.getSolutionFile(), new TypeReference<List<FileInfo>>() {})).orElse(List.of()),
+                fileInfo,
                 solution.getCreateDatetime(),
                 solution.getUpdateDatetime()
         );
@@ -154,12 +169,22 @@ public class SolutionService {
 	public List<FileInfo> parseSolutionFiles(Long solutionId) {
 		if (solutionId == null) return Collections.emptyList();
 		
-		// solution의 solutionFile JSONB 파싱
 		return solutionRepository.findByIdAndDeleteYn(solutionId, "N")
 				.map(solution -> {
-					List<FileInfo> files = JsonbUtils.fromJson(
-							solution.getSolutionFile(), new TypeReference<List<FileInfo>>() {});
-					return Optional.ofNullable(files).orElse(Collections.emptyList());
+                    String fileJson = solution.getSolutionFile();
+                    if (fileJson == null || fileJson.isBlank()) return Collections.<FileInfo>emptyList();
+                    
+                    try {
+                        if (fileJson.trim().startsWith("[")) {
+                            List<FileInfo> files = JsonbUtils.fromJson(fileJson, new TypeReference<List<FileInfo>>() {});
+                            return Optional.ofNullable(files).orElse(Collections.emptyList());
+                        } else {
+                            FileInfo file = JsonbUtils.fromJson(fileJson, FileInfo.class);
+                            return file != null ? List.of(file) : Collections.<FileInfo>emptyList();
+                        }
+                    } catch (Exception e) {
+                        return Collections.<FileInfo>emptyList();
+                    }
 				})
 				.orElse(Collections.emptyList());
 	}

@@ -142,7 +142,6 @@ public class InitialDataLoader implements CommandLineRunner {
 
             Todo todo = Todo.builder()
                     .menteeId(menteeId)
-                    .goalId(1L + random.nextInt(3)) // 가상의 목표 ID
                     .solutionId(solutionId)
                     .todoDate(todoDate)
                     .todoName(subject + " 과제 " + i)
@@ -234,16 +233,14 @@ public class InitialDataLoader implements CommandLineRunner {
         String[] subjects = {"국어", "영어", "수학"};
         for (int i = 1; i <= 3; i++) {
             String subject = subjects[random.nextInt(subjects.length)];
-            List<FileInfo> files = List.of(
-                    createFileInfo("weakness_solution_" + menteeId + "_" + i + "_file1.pdf", "/weakness_solutions/" + menteeId + "/" + i + "/file1.pdf", "약점 분석 자료"),
-                    createFileInfo("weakness_solution_" + menteeId + "_" + i + "_file2.jpg", "/weakness_solutions/" + menteeId + "/" + i + "/file2.jpg", "보완 학습 자료")
-            );
+            FileInfo file = createFileInfo("weakness_solution_" + menteeId + "_" + i + "_file1.pdf", "/weakness_solutions/" + menteeId + "/" + i + "/file1.pdf", "약점 분석 자료");
+            
             Solution solution = Solution.builder()
                     .menteeId(menteeId)
                     .mentorId(mentorId)
                     .subject(subject)
                     .solutionContent(subject + " 약점 " + i + " 솔루션: 관련 문제 풀이 및 개념 복습")
-                    .solutionFile(JsonbUtils.toJson(files))
+                    .solutionFile(JsonbUtils.toJson(file))
                     .build();
             solutionRepository.save(solution);
 			
