@@ -30,10 +30,6 @@ public abstract class BaseEntity {
     @Column(name = "delete_yn", nullable = false, length = 1)
     private String deleteYn = "N";
 
-    @Builder.Default
-    @Column(name = "activate_yn", nullable = false, length = 1)
-    private String activateYn = "N";
-
     public void delete() {
         this.deleteYn = "Y";
     }

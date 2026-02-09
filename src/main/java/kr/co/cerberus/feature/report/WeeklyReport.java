@@ -6,8 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 
@@ -45,15 +43,10 @@ public class WeeklyReport extends BaseEntity {
     @Column(name = "improvements", columnDefinition = "TEXT")
     private String improvements; // 보완점
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "report_file", columnDefinition = "jsonb")
-    private String reportFile; // JSONB, FileInfo 리스트 (추가 첨부 자료)
-
-    public void updateReport(String summary, String overallEvaluation, String strengths, String improvements, String reportFile) {
+    public void updateReport(String summary, String overallEvaluation, String strengths, String improvements) {
         this.summary = summary;
         this.overallEvaluation = overallEvaluation;
         this.strengths = strengths;
         this.improvements = improvements;
-        this.reportFile = reportFile;
     }
 }

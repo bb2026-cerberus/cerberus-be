@@ -28,7 +28,7 @@ public class MentorQnaController {
             @PathVariable Long userId,
             @PathVariable String userRole,
             @Valid @RequestBody QnaAnswerRequestDto requestDto) {
-        QnaResponseDto response = qnaService.answerQna(userId, Role.valueOf(userRole), requestDto);
+        QnaResponseDto response = qnaService.answerQna(userId, Role.valueOf(userRole.toUpperCase()), requestDto);
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 
@@ -44,7 +44,7 @@ public class MentorQnaController {
     public ResponseEntity<CommonResponse<List<QnaResponseDto>>> getQnasByMentorId(
             @PathVariable Long mentorId,
             @PathVariable String userRole) {
-        List<QnaResponseDto> response = qnaService.getQnasByMentorId(mentorId, Role.valueOf(userRole));
+        List<QnaResponseDto> response = qnaService.getQnasByMentorId(mentorId, Role.valueOf(userRole.toUpperCase()));
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 }

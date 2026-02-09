@@ -22,26 +22,25 @@ public class Solution extends BaseEntity {
     @Column(name = "solution_seq")
     private Long id;
 
+    @Column(name = "mentee_seq", nullable = false)
+    private Long menteeId;
+
     @Column(name = "mentor_seq", nullable = false)
-    private Long mentorId; // 솔루션 등록 멘토 ID
+    private Long mentorId;
+	
+	@Column(name = "solution_content", columnDefinition = "TEXT", nullable = false)
+	private String solutionContent; // 솔루션 내용/보완점
 
-    @Column(name = "title", nullable = false)
-    private String title; // 솔루션 제목
-
-    @Column(name = "description")
-    private String description; // 솔루션 설명
-
-    @Column(name = "subject", columnDefinition = "varchar(10)")
-    private String subject; // 과목
+    @Column(name = "subject", columnDefinition = "varchar(10)", nullable = false)
+    private String subject; // 관련 과목
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "solution_file", columnDefinition = "jsonb")
-    private String solutionFile; // JSONB, FileInfo 리스트 (학습지 파일 등)
+    private String solutionFile; // JSONB, FileInfo 리스트 (첨부 자료)
 
-    public void updateSolution(String title, String description, String subject, String solutionFile) {
-        this.title = title;
-        this.description = description;
+    public void updateSolution(String subject, String solutionContent, String solutionFile) {
         this.subject = subject;
+        this.solutionContent = solutionContent;
         this.solutionFile = solutionFile;
     }
 }

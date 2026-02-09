@@ -60,14 +60,12 @@ public class MentorWeeklyReportController {
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 
-    @Operation(summary = "멘토가 특정 멘티의 주간 리포트 목록 조회", description = "멘토가 관리하는 특정 멘티의 기간별 주간 리포트 목록을 조회합니다.")
-    @GetMapping("/by-mentor/{mentorId}/mentees/{menteeId}")
-    public ResponseEntity<CommonResponse<List<WeeklyReportResponseDto>>> getWeeklyReportsByMentorAndMentee(
+    @Operation(summary = "멘토가 관리하는 모든 멘티의 주간 리포트 목록 조회", description = "특정 주차(월요일 기준)의 모든 멘티 리포트를 조회합니다. 작성 전인 경우 AI 초안이 포함됩니다.")
+    @GetMapping("/by-mentor/{mentorId}")
+    public ResponseEntity<CommonResponse<List<WeeklyReportResponseDto>>> getWeeklyReportsByMentor(
             @PathVariable Long mentorId,
-            @PathVariable Long menteeId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        List<WeeklyReportResponseDto> response = weeklyReportService.getWeeklyReportsByMentorAndMentee(mentorId, menteeId, startDate, endDate);
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate mondayDate) {
+        List<WeeklyReportResponseDto> response = weeklyReportService.getMenteesWeeklyReports(mentorId, mondayDate);
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 

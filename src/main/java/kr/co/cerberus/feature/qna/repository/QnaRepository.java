@@ -9,9 +9,12 @@ import java.util.List;
 import java.util.Optional;
 
 public interface QnaRepository extends JpaRepository<Qna, Long> {
-    List<Qna> findByMenteeIdAndActivateYn(Long menteeId, String activateYn);
-    List<Qna> findByMentorIdAndCreateDatetimeBetweenAndActivateYn(Long mentorId, LocalDateTime startDt, LocalDateTime endDt, String activateYn);
-    List<Qna> findByMentorIdAndDeleteYn(Long mentorId, String deleteYn);
-    Optional<Qna> findByMenteeIdAndQnaDateAndDeleteYn(Long menteeId, LocalDate qnaDate, String deleteYn);
-    Optional<Qna> findByIdAndDeleteYn(Long id, String deleteYn);
+    List<Qna> findByMentorId(Long mentorId);
+    List<Qna> findByMenteeId(Long menteeId);
+    List<Qna> findByMentorIdAndCreateDatetimeBetween(Long mentorId, LocalDateTime startDt, LocalDateTime endDt);
+	Optional<Qna> findByMenteeIdAndQnaDateAndDeleteYn(Long menteeId, LocalDate qnaDate, String deleteYn);
+	Optional<Qna> findByIdAndDeleteYn(Long id, String deleteYn);
+	
+    // 멘토 홈 Q&A 현황용 - 답변 대기 중인(qnaCompleteYn='N') 개수 조회
+    long countByMentorIdAndQnaCompleteYn(Long mentorId, String qnaCompleteYn);
 }

@@ -12,6 +12,5 @@ public record WeeklyReportUpdateRequestDto(
     @NotBlank String summary,
     @NotBlank String overallEvaluation,
     @NotBlank String strengths,
-    @NotBlank String improvements,
-    List<FileInfo> reportFiles
+    @NotBlank String improvements
 ) {}

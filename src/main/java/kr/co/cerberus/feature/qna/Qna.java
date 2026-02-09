@@ -48,9 +48,7 @@ public class Qna extends BaseEntity {
     @Column(name = "qna_complete_yn", columnDefinition = "bpchar(1) default 'N'", nullable = false)
     private String qnaCompleteYn = "N";
 
-
     public void updateQuestion(String questionContent, String qnaFile) {
-//        this.title = title;
         this.questionContent = questionContent;
         this.qnaFile = qnaFile;
     }

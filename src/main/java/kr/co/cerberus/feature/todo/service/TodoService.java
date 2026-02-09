@@ -8,7 +8,6 @@ import kr.co.cerberus.feature.todo.dto.*;
 import kr.co.cerberus.feature.todo.repository.TodoRepository;
 import kr.co.cerberus.global.error.CustomException;
 import kr.co.cerberus.global.error.ErrorCode;
-import kr.co.cerberus.global.jsonb.FeedbackFileData;
 import kr.co.cerberus.global.jsonb.FileInfo;
 import kr.co.cerberus.global.jsonb.TodoFileData;
 import kr.co.cerberus.global.util.FileStorageService;
@@ -18,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,8 +32,7 @@ public class TodoService {
 	private final SolutionService solutionService;
 	private final FileStorageService fileStorageService;
 
-	public List<GroupedTodosResponseDto> findTodos(Long menteeId, LocalDate startDate, LocalDate endDate) { // 반환 타입 변경
-		// TODO: 보안 - 현재 로그인한 사용자가 요청한 menteeId에 접근 권한이 있는지 검증 필요
+	public List<GroupedTodosResponseDto> findTodos(Long menteeId, LocalDate startDate, LocalDate endDate) {
 		List<Todo> todos;
 
 		if (startDate == null) {
@@ -50,7 +49,7 @@ public class TodoService {
 				.filter(java.util.Objects::nonNull)
 				.collect(Collectors.toSet());
 
-		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionTitle(solutionIds);
+		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionContent(solutionIds);
 
 		todos.sort(Comparator.comparing(Todo::getTodoDate).reversed());
 		Map<LocalDate, List<TodoListResponseDto>> groupedTodos = todos.stream()
@@ -76,13 +75,12 @@ public class TodoService {
 		// TODO: 보안 - 현재 로그인한 사용자가 요청한 menteeId에 접근 권한이 있는지 검증 필요
 		List<Todo> todos = todoRepository.findByMenteeIdAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeId, "N", "N", "Y");
 
-		// N+1 최적화: 필요한 Solution ID들을 수집하여 한 번에 조회
 		Set<Long> solutionIds = todos.stream()
 				.map(Todo::getSolutionId)
 				.filter(java.util.Objects::nonNull)
 				.collect(Collectors.toSet());
 
-		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionTitle(solutionIds);
+		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionContent(solutionIds);
 
 		todos.sort(Comparator.comparing(Todo::getTodoDate).reversed());
 		Map<LocalDate, List<TodoListResponseDto>> groupedTodos = todos.stream()
@@ -104,31 +102,25 @@ public class TodoService {
 				.toList();
 	}
 
-	public List<GroupedTodosResponseDto> findTodosWeekly(Long menteeId, LocalDate mondayDate) { // 반환 타입 변경
-		LocalDate startDate = mondayDate;
+	public List<GroupedTodosResponseDto> findTodosWeekly(Long menteeId, LocalDate mondayDate) {
+		LocalDate startDate = mondayDate.with(DayOfWeek.MONDAY);
 		LocalDate endDate = mondayDate.plusDays(6);
 		return findTodos(menteeId, startDate, endDate);
 	}
 
 	public TodoDetailResponseDto findTodoDetail(Long todoId) {
-		Todo todo = findById(todoId);
+		Todo todo = todoRepository.findById(todoId)
+				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+		
 		String solutionTitle = solutionService.getSolutionTitleById(todo.getSolutionId());
-
-		// solution의 solutionFile JSONB 파싱 (solution에 연결된 학습지)
 		List<FileInfo> solutionWorkbooks = solutionService.parseSolutionFiles(todo.getSolutionId());
 
-		// 피드백 JSONB 파싱
 		String feedbackContent = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N")
-				.map(feedback -> {
-					FeedbackFileData data = JsonbUtils.fromJson(feedback.getFeedFile(), FeedbackFileData.class);
-					return data != null ? data.getContent() : null;
-				})
+				.map(Feedback::getContent)
 				.orElse(null);
 
-		// todoFile JSONB 파싱
 		TodoFileData todoFileData = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 
-		// todoFileData의 verificationImages JSONB 파싱
 		List<FileInfo> verificationImages = Collections.emptyList();
 		if (todoFileData != null && todoFileData.getVerificationImages() != null) {
 			verificationImages = todoFileData.getVerificationImages();
@@ -203,6 +195,12 @@ public class TodoService {
 	}
 
 	@Transactional
+	public void toggleStatus(Long todoId) {
+		Todo todo = todoRepository.findById(todoId)
+				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+		todo.toggleComplete();
+	}
+	
 	public void markComplete(Long todoId) {
 		Todo todo = findById(todoId);
 		todo.markComplete();
@@ -210,14 +208,13 @@ public class TodoService {
 
 	@Transactional
 	public VerificationResponseDto uploadVerification(Long todoId, List<MultipartFile> images) {
-		Todo todo = findById(todoId);
+		Todo todo = todoRepository.findById(todoId)
+				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
-		// 모든 파일을 저장하고 FileInfo 리스트 생성
 		List<FileInfo> fileInfos = images.stream()
 				.map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "todos"), null))
 				.toList();
 
-		// todoFile JSONB에 인증 정보 업데이트
 		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 		TodoFileData updated = (existing != null)
 				? existing.updateVerificationImages(fileInfos)
