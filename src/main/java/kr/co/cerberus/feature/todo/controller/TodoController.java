@@ -3,6 +3,7 @@ package kr.co.cerberus.feature.todo.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import kr.co.cerberus.feature.feedback.service.FeedbackService;
 import kr.co.cerberus.feature.todo.dto.*;
 import kr.co.cerberus.feature.todo.service.TodoService;
 import kr.co.cerberus.global.common.CommonResponse;
@@ -30,6 +31,7 @@ public class TodoController {
 
 	private final TodoService todoService;
 	private final FileStorageService fileStorageService;
+	private final FeedbackService feedbackService;
 
 	@Operation(summary = "할일 목록 조회", description = "전체/기간별/일별 할일 목록을 조회합니다. startDate만 있으면 일별, startDate+endDate는 기간별, 둘 다 없으면 전체 조회")
 	@GetMapping
@@ -109,6 +111,7 @@ public class TodoController {
 			@Parameter(description = "인증 사진 파일 (여러 개 가능)", required = true) @RequestPart("images") List<MultipartFile> images) {
 
 		VerificationResponseDto response = todoService.uploadVerification(todoId, images);
+		feedbackService.analyzeTodoImagesAsync(todoId);
 		return ResponseEntity.ok(CommonResponse.of(response));
 	}
 
@@ -129,6 +132,7 @@ public class TodoController {
 			@Parameter(description = "새로운 인증 사진 파일 (여러 개 가능)", required = true) @RequestPart("images") List<MultipartFile> images) {
 
 		VerificationResponseDto response = todoService.updateVerification(todoId, images);
+		feedbackService.analyzeTodoImagesAsync(todoId);
 		return ResponseEntity.ok(CommonResponse.of(response));
 	}
 

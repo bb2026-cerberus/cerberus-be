@@ -116,10 +116,6 @@ public class TodoService {
 		String solutionTitle = solutionService.getSolutionTitleById(todo.getSolutionId());
 		List<FileInfo> solutionWorkbooks = solutionService.parseSolutionFiles(todo.getSolutionId());
 
-		String feedbackContent = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N")
-				.map(Feedback::getContent)
-				.orElse(null);
-
 		TodoFileData todoFileData = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
 
 		List<FileInfo> verificationImages = Collections.emptyList();
@@ -147,7 +143,8 @@ public class TodoService {
 				.content(todo.getTodoNote())
 				.solution(solutionTitle)
 				.date(todo.getTodoDate())
-				.completed("Y".equals(todo.getTodoCompleteYn()))
+				.todoCompleted("Y".equals(todo.getTodoCompleteYn()))
+				.feedbackCompleted("Y".equals(feedback.getFeedCompleteYn()))
 				.subject(todo.getTodoSubjects())
 				.workbooks(solutionWorkbooks)
 				.studyVerificationImages(verificationImages)
@@ -251,7 +248,7 @@ public class TodoService {
 		Todo todo = findById(todoId);
 
 		// 피드백 존재 시 인증사진 수정 불가
-		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N");
+		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYnAndFeedCompleteYn(todoId, "N", "Y");
 		if (feedback.isPresent()) {
 			throw new CustomException(ErrorCode.INVALID_PARAMETER, "피드백이 등록되어 수정이 불가합니다.");
 		}
@@ -283,7 +280,7 @@ public class TodoService {
 		Todo todo = findById(todoId);
 
 		// 피드백 존재 시 인증사진 삭제 불가
-		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N");
+		Optional<Feedback> feedback = feedbackRepository.findByTodoIdAndDeleteYnAndFeedCompleteYn(todoId, "N", "Y");
 		if (feedback.isPresent()) {
 			throw new CustomException(ErrorCode.INVALID_PARAMETER, "피드백이 등록되어 삭제가 불가합니다.");
 		}

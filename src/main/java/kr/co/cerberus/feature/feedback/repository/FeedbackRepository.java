@@ -12,6 +12,8 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
 
 	Optional<Feedback> findByTodoIdAndDeleteYn(Long todoId, String deleteYn);
 
+	Optional<Feedback> findByTodoIdAndDeleteYnAndFeedCompleteYn(Long todoId, String deleteYn, String feedCompleteYn);
+
 	// 기존 멘티 API 호환을 위해 유지
 	List<Feedback> findByTodoIdInAndDeleteYn(List<Long> todoIds, String deleteYn);
 	
