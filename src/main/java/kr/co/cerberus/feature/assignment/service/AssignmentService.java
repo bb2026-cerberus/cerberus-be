@@ -3,6 +3,7 @@ package kr.co.cerberus.feature.assignment.service;
 import kr.co.cerberus.feature.assignment.dto.AssignmentDetailResponseDto;
 import kr.co.cerberus.feature.assignment.dto.AssignmentListResponseDto;
 import kr.co.cerberus.feature.feedback.Feedback;
+import kr.co.cerberus.feature.feedback.dto.FeedbackDetailResponseDto;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
 import kr.co.cerberus.feature.report.service.WeeklyReportService;
 import kr.co.cerberus.feature.solution.service.SolutionService;
@@ -99,13 +100,23 @@ public class AssignmentService {
 			mergedWorkbooks.addAll(todoFileData.getWorkbooks());
 		}
 
-		String feedbackContent = feedbackRepository.findByTodoIdAndDeleteYn(assignmentId, "N")
-				.map(Feedback::getContent)
-				.orElse(null);
-
 		List<FileInfo> verificationImages = Collections.emptyList();
 		if (todoFileData != null && todoFileData.getVerificationImages() != null) {
 			verificationImages = todoFileData.getVerificationImages();
+		}
+
+		Feedback feedback = feedbackRepository.findByTodoIdAndDeleteYn(assignmentId, "N")
+				.orElse(null);
+
+		FeedbackDetailResponseDto.FeedbackInfo feedbackInfo = null;
+		if (feedback != null) {
+			feedbackInfo = FeedbackDetailResponseDto.FeedbackInfo.builder()
+					.feedbackId(feedback.getId())
+					.content(feedback.getContent())
+					.summary(feedback.getSummary())
+					.draftYn(feedback.getFeedDraftYn())
+					.completeYn(feedback.getFeedCompleteYn())
+					.build();
 		}
 
 		return AssignmentDetailResponseDto.builder()
@@ -118,7 +129,7 @@ public class AssignmentService {
 				.subject(todo.getTodoSubjects())
 				.workbooks(mergedWorkbooks)
 				.studyVerificationImages(verificationImages)
-				.feedback(feedbackContent)
+				.feedback(feedbackInfo)
 				.build();
 	}
 

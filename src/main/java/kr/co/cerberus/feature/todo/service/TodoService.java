@@ -1,6 +1,7 @@
 package kr.co.cerberus.feature.todo.service;
 
 import kr.co.cerberus.feature.feedback.Feedback;
+import kr.co.cerberus.feature.feedback.dto.FeedbackDetailResponseDto;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
 import kr.co.cerberus.feature.solution.service.SolutionService;
 import kr.co.cerberus.feature.todo.Todo;
@@ -126,6 +127,20 @@ public class TodoService {
 			verificationImages = todoFileData.getVerificationImages();
 		}
 
+		Feedback feedback = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N")
+				.orElse(null);
+
+		FeedbackDetailResponseDto.FeedbackInfo feedbackInfo = null;
+		if (feedback != null) {
+			feedbackInfo = FeedbackDetailResponseDto.FeedbackInfo.builder()
+					.feedbackId(feedback.getId())
+					.content(feedback.getContent())
+					.summary(feedback.getSummary())
+					.draftYn(feedback.getFeedDraftYn())
+					.completeYn(feedback.getFeedCompleteYn())
+					.build();
+		}
+
 		return TodoDetailResponseDto.builder()
 				.todoId(todo.getId())
 				.title(todo.getTodoName())
@@ -136,7 +151,7 @@ public class TodoService {
 				.subject(todo.getTodoSubjects())
 				.workbooks(solutionWorkbooks)
 				.studyVerificationImages(verificationImages)
-				.feedback(feedbackContent)
+				.feedback(feedbackInfo)
 				.build();
 	}
 

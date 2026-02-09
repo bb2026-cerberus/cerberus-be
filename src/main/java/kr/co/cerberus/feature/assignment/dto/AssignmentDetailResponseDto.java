@@ -1,5 +1,6 @@
 package kr.co.cerberus.feature.assignment.dto;
 
+import kr.co.cerberus.feature.feedback.dto.FeedbackDetailResponseDto;
 import kr.co.cerberus.global.jsonb.FileInfo;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,5 +20,5 @@ public class AssignmentDetailResponseDto {
 	private String subject;
 	private List<FileInfo> workbooks;
 	private List<FileInfo> studyVerificationImages;
-	private String feedback;
+	private FeedbackDetailResponseDto.FeedbackInfo feedback;
 }
