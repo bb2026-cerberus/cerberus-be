@@ -178,7 +178,7 @@ public class AssignmentService {
 			verificationImages = todoFileData.getVerificationImages();
 		}
 
-		Feedback feedback = feedbackRepository.findByTodoIdAndDeleteYn(assignmentId, "N")
+		Feedback feedback = feedbackRepository.findByTodoIdAndDeleteYnAndFeedCompleteYn(assignmentId, "N", "Y")
 				.orElse(null);
 
 		FeedbackDetailResponseDto.FeedbackInfo feedbackInfo = null;

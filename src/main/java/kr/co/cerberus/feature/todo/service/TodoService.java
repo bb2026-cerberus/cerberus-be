@@ -123,7 +123,7 @@ public class TodoService {
 			verificationImages = todoFileData.getVerificationImages();
 		}
 
-		Feedback feedback = feedbackRepository.findByTodoIdAndDeleteYn(todoId, "N")
+		Feedback feedback = feedbackRepository.findByTodoIdAndDeleteYnAndFeedCompleteYn(todoId, "N", "Y")
 				.orElse(null);
 
 		FeedbackDetailResponseDto.FeedbackInfo feedbackInfo = null;
