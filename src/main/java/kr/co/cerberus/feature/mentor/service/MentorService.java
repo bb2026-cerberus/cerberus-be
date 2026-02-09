@@ -127,12 +127,13 @@ public class MentorService {
         log.debug("Draft count calculated directly from DB for mentorId: {}", mentorId);
         List<Long> menteeIds = getMenteeIdsByMentorId(mentorId);
 
-        // 과제 임시저장: todoDraftYn='N' (할당되지 않음)
-        long assignmentDraftCount = todoRepository.countByMenteeIdInAndTodoAssignYn(
-                menteeIds, "N");
-        // 피드백 임시저장: feedDraftYn='Y'
-        long feedbackDraftCount = feedbackRepository.countByMentorIdAndFeedDraftYn(
-                mentorId, "Y");
+        // 과제 임시저장: 할당된 과제(Y) 중 임시저장 상태(Y)인 것
+        long assignmentDraftCount = todoRepository.countByMenteeIdInAndTodoAssignYnAndTodoDraftYnAndDeleteYn(
+                menteeIds, "Y", "Y", "N");
+        
+        // 피드백 임시저장: 임시저장 상태(Y)인 것
+        long feedbackDraftCount = feedbackRepository.countByMentorIdAndFeedDraftYnAndDeleteYn(
+                mentorId, "Y", "N");
 
         return new DraftCountResponseDto(assignmentDraftCount, feedbackDraftCount);
     }

@@ -36,7 +36,7 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
 			List<Long> menteeIds, String assignYn, LocalDate startDate, LocalDate endDate);
 
 	// 특정 멘토의 멘티들이 임시 저장한 과제의 개수
-	long countByMenteeIdInAndTodoAssignYn(List<Long> menteeIds, String assignYn);
+	long countByMenteeIdInAndTodoAssignYnAndTodoDraftYnAndDeleteYn(List<Long> menteeIds, String assignYn, String draftYn, String deleteYn);
 	
 	// MenteeId로 모든 Todo를 조회 (진행률 계산용)
 	List<Todo> findByMenteeId(Long menteeId);

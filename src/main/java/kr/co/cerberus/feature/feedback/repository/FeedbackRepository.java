@@ -23,7 +23,7 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Long> {
 			Long mentorId, String feedCompleteYn, LocalDateTime startDt, LocalDateTime endDt);
 
 	// 멘토가 관리하는 멘티의 임시 저장 피드백 개수
-	long countByMentorIdAndFeedDraftYn(Long mentorId, String feedDraftYn);
+	long countByMentorIdAndFeedDraftYnAndDeleteYn(Long mentorId, String feedDraftYn, String deleteYn);
 
 	// 멘티 ID, 특정 기간의 모든 피드백 조회 (주간 리포트용)
 	List<Feedback> findByMenteeIdAndFeedDateBetween(Long menteeId, LocalDate startDate, LocalDate endDate);
