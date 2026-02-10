@@ -1,0 +1,12 @@
+{
+  "case": "case01",
+  "model": "gemini-2.5-flash",
+  "raw_images": [
+    "inputs\\case01\\images\\1000021218.webp"
+  ],
+  "preprocessed_images": [
+    "outputs\\case01\\preprocessed\\1000021218.png"
+  ],
+  "temperature": 0.0,
+  "generated_at": "2026-02-09T23:04:50"
+}

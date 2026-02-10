@@ -1,0 +1,7 @@
+{
+  "cases": 1,
+  "model": "gemini-2.5-flash",
+  "avg_confidence": 0.8,
+  "avg_questions_to_student": 2.0,
+  "image_quality_issues_top": []
+}
