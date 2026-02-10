@@ -101,10 +101,10 @@ public class SolutionService {
         if (menteeId != null) {
             // 특정 멘티 조회 시 멘토-멘티 관계 확인
             validateMentorMenteeRelation(mentorId, menteeId);
-            solutions = solutionRepository.findByMentorIdAndMenteeId(mentorId, menteeId);
+            solutions = solutionRepository.findByMentorIdAndMenteeIdAndDeleteYn(mentorId, menteeId, "N");
         } else {
             // menteeId가 null이면 멘토가 등록한 전체 조회
-            solutions = solutionRepository.findByMentorId(mentorId);
+            solutions = solutionRepository.findByMentorIdAndDeleteYn(mentorId, "N");
         }
 
         return solutions.stream()
