@@ -398,11 +398,16 @@ public class TodoService {
 			} catch (Exception e) {
 				log.error("Error parsing timer JSON for todoId={}", todo.getId(), e);
 			}
-
 			if (!sessionDtos.isEmpty()) {
 				items.add(TodoTimerDailyResponseDto.TodoTimerItem.builder()
-						.todoId(todo.getId()).title(todo.getTodoName()).subject(todo.getTodoSubjects())
-						.totalMinutes(todoTotalMinutes).sessions(sessionDtos).build());
+						.todoId(todo.getId())
+                        .title(todo.getTodoName())
+                        .subject(todo.getTodoSubjects())
+                        .note(todo.getTodoNote())
+                        .name(todo.getTodoName())
+                        .assignYn(todo.getTodoAssignYn())
+						.totalMinutes(todoTotalMinutes)
+                        .sessions(sessionDtos).build());
 			}
 		}
 
@@ -412,7 +417,59 @@ public class TodoService {
 				.items(items).build();
 	}
 
-	private boolean isOverlapping(LocalDateTime aStart, LocalDateTime aEnd, LocalDateTime bStart, LocalDateTime bEnd) {
+    public TodoDailyDetailResponseDto getTodosByDateDetail(Long menteeId, LocalDate date) {
+        List<Todo> todos = todoRepository.findByMenteeIdAndTodoDateAndDeleteYn(menteeId, date, "N");
+
+        List<TodoDailyDetailResponseDto.TodoItem> items = todos.stream()
+                .map(todo -> {
+                    String assignYn = todo.getTodoAssignYn(); // 필드명 맞게 수정
+                    return TodoDailyDetailResponseDto.TodoItem.builder()
+                            .todoId(todo.getId())
+                            .name(todo.getTodoName())
+                            .subject(todo.getTodoSubjects())
+                            .note(todo.getTodoNote())
+                            .assignYn(assignYn)
+                            .type(toType(assignYn))                 // 'Y'면 할일, 'N'이면 과제
+                            .completeYn(todo.getTodoCompleteYn())
+                            .todoDate(todo.getTodoDate())// 원하면 포함
+                            .build();
+                })
+                .toList();
+
+        return TodoDailyDetailResponseDto.builder()
+                .menteeId(menteeId)
+                .date(date)
+                .totalCount(items.size())
+                .items(items)
+                .build();
+    }
+
+    private String toType(String assignYn) {
+        if ("Y".equalsIgnoreCase(assignYn)) return "할일";
+        if ("N".equalsIgnoreCase(assignYn)) return "과제";
+        return null;
+    }
+
+    @Transactional(readOnly = true)
+    public TodoDailyOverviewResponseDto getDailyOverview(Long menteeId, LocalDate date) {
+
+        TodoDailyDetailResponseDto todoDetail =
+                getTodosByDateDetail(menteeId, date);   // 기존 메서드 재사용
+
+        TodoTimerDailyResponseDto timerSummary =
+                getTimersByDate(menteeId, date);        // 기존 메서드 재사용
+
+        return TodoDailyOverviewResponseDto.builder()
+                .menteeId(menteeId)
+                .date(date)
+                .todoDetail(todoDetail)
+                .timerSummary(timerSummary)
+                .build();
+    }
+
+
+
+    private boolean isOverlapping(LocalDateTime aStart, LocalDateTime aEnd, LocalDateTime bStart, LocalDateTime bEnd) {
 		return aStart.isBefore(bEnd) && aEnd.isAfter(bStart);
 	}
 	private LocalDateTime max(LocalDateTime a, LocalDateTime b) { return a.isAfter(b) ? a : b; }
