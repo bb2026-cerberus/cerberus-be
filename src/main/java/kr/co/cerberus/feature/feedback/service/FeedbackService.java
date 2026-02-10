@@ -8,6 +8,7 @@ import kr.co.cerberus.feature.feedback.dto.FeedbackWeeklyResponseDto;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
 import kr.co.cerberus.feature.member.Member;
 import kr.co.cerberus.feature.member.repository.MemberRepository;
+import kr.co.cerberus.feature.notification.service.NotificationService;
 import kr.co.cerberus.feature.relation.Relation;
 import kr.co.cerberus.feature.relation.repository.RelationRepository;
 import kr.co.cerberus.feature.report.service.WeeklyReportService;
@@ -48,6 +49,7 @@ public class FeedbackService {
     private final FileStorageService fileStorageService;
     private final ChatClient chatClient;
     private final WeeklyReportService weeklyReportService;
+    private final NotificationService notificationService;
 
     public FeedbackService(
             FeedbackRepository feedbackRepository,
@@ -56,7 +58,8 @@ public class FeedbackService {
             RelationRepository relationRepository,
             FileStorageService fileStorageService,
             ChatClient.Builder chatClientBuilder,
-            WeeklyReportService weeklyReportService) {
+            WeeklyReportService weeklyReportService,
+            NotificationService notificationService) {
         this.feedbackRepository = feedbackRepository;
         this.todoRepository = todoRepository;
         this.memberRepository = memberRepository;
@@ -64,6 +67,7 @@ public class FeedbackService {
         this.fileStorageService = fileStorageService;
         this.chatClient = chatClientBuilder.build();
         this.weeklyReportService = weeklyReportService;
+        this.notificationService = notificationService;
     }
 
     /**
@@ -120,6 +124,9 @@ public class FeedbackService {
         );
 
         feedbackRepository.save(feedback);
+
+        notificationService.notifyFeedbackCompleted(requestDto.menteeId(), requestDto.todoId());
+
     }
 
     /**

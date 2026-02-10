@@ -23,6 +23,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import kr.co.cerberus.feature.notification.PushSubscription;
+import kr.co.cerberus.feature.notification.repository.PushSubscriptionRepository;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -40,6 +42,8 @@ public class InitialDataLoader implements CommandLineRunner {
     private final FeedbackRepository feedbackRepository;
     private final QnaRepository qnaRepository;
     private final WeeklyReportRepository weeklyReportRepository;
+    private final PushSubscriptionRepository pushSubscriptionRepository;
+
 
     private static final LocalDate START_DATE = LocalDate.of(2026, 2, 1);
     private static final LocalDate TODAY = LocalDate.now();
@@ -76,8 +80,28 @@ public class InitialDataLoader implements CommandLineRunner {
         createWeeklyReports(mentor01.getId(), mentee01.getId(), LocalDate.of(2026, 2, 2));
         createWeeklyReports(mentor01.getId(), mentee02.getId(), LocalDate.of(2026, 2, 2));
 
+
+        // Push Subscription 생성 (멘티용)
+        createPushSubscriptionIfNotFound(mentee01.getId(), "dummy-endpoint-mentee01", "dummy-p256dh", "dummy-auth");
+        createPushSubscriptionIfNotFound(mentee02.getId(), "dummy-endpoint-mentee02", "dummy-p256dh", "dummy-auth");
+
         System.out.println("[InitialData] 모든 초기 데이터 생성 완료.");
     }
+    // endpoint/p256dh/auth 값 프론트에서 받기 위해 임시로 하드코딩/ 나중에 프론트랑 붙일때 바꾸기!!!!
+    private void createPushSubscriptionIfNotFound(Long menteeId, String endpoint, String p256dh, String auth) {
+        boolean exists = pushSubscriptionRepository.findByMenteeId(menteeId).stream()
+                .anyMatch(s -> endpoint.equals(s.getEndpoint()));
+        if (!exists) {
+            pushSubscriptionRepository.save(PushSubscription.builder()
+                    .menteeId(menteeId)
+                    .endpoint(endpoint)
+                    .p256dh(p256dh)
+                    .auth(auth)
+                    .build());
+            System.out.println("[InitialData] PushSubscription 생성 완료 (menteeId=" + menteeId + ")");
+        }
+    }
+
 
     private Member createMemberIfNotFound(String memId, String memName, String password, Role role) {
         return memberRepository.findByMemId(memId).orElseGet(() -> {
