@@ -3,6 +3,8 @@ package kr.co.cerberus.feature.mentor.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.co.cerberus.feature.mentor.dto.DraftCountResponseDto;
+import kr.co.cerberus.feature.mentor.dto.MenteeDetailsResponseDto;
+import kr.co.cerberus.feature.mentor.dto.MenteeListResponseDto;
 import kr.co.cerberus.feature.mentor.dto.MenteeProgressResponseDto;
 import kr.co.cerberus.feature.mentor.dto.MentorHomeResponseDto;
 import kr.co.cerberus.feature.mentor.service.MentorService;
@@ -31,19 +33,11 @@ public class MentorController {
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 
-    @Operation(summary = "멘토의 임시저장 개수 조회", description = "멘토가 관리하는 멘티들의 과제 및 피드백 임시저장 개수를 조회합니다.")
-    @GetMapping("/{mentorId}/draft-counts")
-    public ResponseEntity<CommonResponse<DraftCountResponseDto>> getDraftCounts(@PathVariable Long mentorId) {
-        DraftCountResponseDto response = mentorService.getDraftCounts(mentorId);
-        return ResponseEntity.ok(CommonResponse.of(response));
-    }
-
-    @Operation(summary = "멘티별 진행률 통계 조회", description = "멘토 ID와 멘티 ID 기반으로 멘티의 전체 및 과목별 과제 진행률을 조회합니다.")
-    @GetMapping("/{mentorId}/mentees/{menteeId}/progress")
-    public ResponseEntity<CommonResponse<MenteeProgressResponseDto>> getMenteeProgress(
-            @PathVariable Long mentorId,
-            @PathVariable Long menteeId) {
-        MenteeProgressResponseDto response = mentorService.getMenteeProgress(mentorId, menteeId);
+    @Operation(summary = "담당 멘티 목록 조회", description = "멘토가 담당하는 멘티 목록을 조회합니다.")
+    @GetMapping("/{mentorId}/mentees")
+    public ResponseEntity<CommonResponse<MenteeListResponseDto>> getMenteeList(
+            @PathVariable Long mentorId) {
+        MenteeListResponseDto response = mentorService.getMenteeList(mentorId);
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 }

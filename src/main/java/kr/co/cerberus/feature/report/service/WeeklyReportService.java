@@ -153,6 +153,20 @@ public class WeeklyReportService {
         return results;
     }
 
+    @Transactional
+    public String getMenteeWeeklyFeedbackSummary(Long menteeId, LocalDate mondayDate) {
+        Relation relation = relationRepository.findFirstByMenteeId(menteeId);
+        String summary = null;
+        Optional<WeeklyReport> existingReport = weeklyReportRepository.findByMenteeIdAndReportDate(menteeId, mondayDate);
+
+        if (existingReport.isPresent()) {
+            summary = existingReport.get().getSummary();
+        } else {
+            summary = "멘토가 주간리포트를 작성한 후에 조회 가능합니다.";
+        }
+        return summary;
+    }
+
     // AI를 이용해 초안 생성 및 즉시 DB 저장
     @Transactional
     public WeeklyReportResponseDto generateAndSaveAiReportDraft(Long mentorId, Long menteeId, LocalDate reportDate) {

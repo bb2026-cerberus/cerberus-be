@@ -31,17 +31,91 @@ import java.time.LocalTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import kr.co.cerberus.feature.mentor.dto.*;
+// ... (existing imports)
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.temporal.TemporalAdjusters;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class MentorService {
+// ... (existing fields)
 
-    private final TodoRepository todoRepository;
+    private final MemberRepository memberRepository;
+    private final TodoRepository  todoRepository;
     private final FeedbackRepository feedbackRepository;
     private final QnaRepository qnaRepository;
-    private final RelationRepository relationRepository; // RelationRepository 주입
-    private final MemberRepository memberRepository; // MemberRepository 주입
+    private final RelationRepository relationRepository;
+
+    // 멘티 상세 현황 조회 (이미지 img_1.png 대응)
+    public MenteeDetailsResponseDto getMenteeDetails(Long mentorId, Long menteeId) {
+        if (!isMentorManagingMentee(mentorId, menteeId)) {
+            throw new CustomException(ErrorCode.RELATION_ACCESS_DENIED);
+        }
+
+        Member mentee = memberRepository.findById(menteeId)
+                .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+
+        LocalDate today = LocalDate.now();
+        LocalDate monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        LocalDate sunday = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.SUNDAY));
+
+        // 1. 오늘 상태
+        List<Todo> todayTodos = todoRepository.findByMenteeIdAndTodoDateAndTodoAssignYnAndDeleteYn(menteeId, today, "Y", "N");
+        int todayTotal = todayTodos.size();
+        int todayCompleted = (int) todayTodos.stream().filter(t -> "Y".equals(t.getTodoCompleteYn())).count();
+        List<String> unsubmittedTitles = todayTodos.stream()
+                .filter(t -> !"Y".equals(t.getTodoCompleteYn()))
+                .map(Todo::getTodoName)
+                .toList();
+
+        // 2. 이번 주 과제/할 일 전체 조회
+        List<Todo> weeklyTodos = todoRepository.findByMenteeIdAndTodoDateBetweenAndDeleteYn(menteeId, monday, sunday, "N");
+
+        // 멘토 과제 달성률
+        List<Todo> mentorAssignments = weeklyTodos.stream().filter(t -> "Y".equals(t.getTodoAssignYn())).toList();
+        double mentorRate = calculateRate(mentorAssignments);
+
+        // 일반 할 일 달성률
+        List<Todo> generalTodos = weeklyTodos.stream().filter(t -> "N".equals(t.getTodoAssignYn())).toList();
+        double generalRate = calculateRate(generalTodos);
+
+        // 3. 이번 주 과목별 달성률
+        Map<String, List<Todo>> subjectMap = weeklyTodos.stream()
+                .filter(t -> t.getTodoSubjects() != null)
+                .collect(Collectors.groupingBy(Todo::getTodoSubjects));
+
+        List<SubjectProgressDto> subjectProgress = subjectMap.entrySet().stream()
+                .map(entry -> new SubjectProgressDto(entry.getKey(), calculateRate(entry.getValue())))
+                .toList();
+
+        // 4. 이번 주 피드백 요약 (가장 최근 것 하나)
+        String feedbackSummary = feedbackRepository.findByMenteeIdAndFeedDateBetween(menteeId, monday, sunday).stream()
+                .filter(f -> "Y".equals(f.getFeedCompleteYn()))
+                .max(Comparator.comparing(Feedback::getCreateDatetime))
+                .map(f -> f.getSummary() != null ? f.getSummary() : f.getContent())
+                .orElse("이번 주 등록된 피드백이 없습니다.");
+
+        return new MenteeDetailsResponseDto(
+                menteeId,
+                mentee.getMemName(),
+                new MenteeDetailsResponseDto.TodayStatus(todayCompleted, todayTotal, unsubmittedTitles),
+                new MenteeDetailsResponseDto.WeeklyAchievement(mentorRate, generalRate),
+                subjectProgress,
+                feedbackSummary
+        );
+    }
+
+    private double calculateRate(List<Todo> todos) {
+        if (todos.isEmpty()) return 0.0;
+        long completed = todos.stream().filter(t -> "Y".equals(t.getTodoCompleteYn())).count();
+        return (double) completed / todos.size() * 100.0;
+    }
 
     // 멘토 홈 화면 데이터 조회
     public MentorHomeResponseDto getMentorHomeData(Long mentorId, LocalDate date) {
@@ -96,6 +170,7 @@ public class MentorService {
                         qna.getId(),
                         qna.getMenteeId(),
                         menteeNames.getOrDefault(qna.getMenteeId(), "알 수 없는 멘티"),
+                        qna.getQuestionContent(),
                         "Y".equals(qna.getQnaCompleteYn()) ? "ANSWERED" : "PENDING",
                         qna.getCreateDatetime()
                 ))
@@ -118,12 +193,17 @@ public class MentorService {
                             .map(Todo::getTodoName)
                             .toList();
 
+                    String pendingLabel = unsubmittedTitles.isEmpty() 
+                            ? "오늘의 모든 과제 완료!" 
+                            : "미제출 : " + String.join(", ", unsubmittedTitles);
+
                     return new MenteeManagementDto(
                             menteeId,
                             menteeNames.getOrDefault(menteeId, "알 수 없는 멘티"),
                             completedCount,
                             totalCount,
-                            unsubmittedTitles
+                            unsubmittedTitles,
+                            pendingLabel
                     );
                 })
                 .sorted(Comparator.comparing(MenteeManagementDto::menteeName)) // 이름순 정렬
@@ -133,9 +213,9 @@ public class MentorService {
     }
 
     private String determineStatus(Todo todo) {
+        if ("Y".equals(todo.getTodoDraftYn())) return "DRAFT";
         if ("Y".equals(todo.getTodoCompleteYn())) return "COMPLETED";
         if ("Y".equals(todo.getTodoAssignYn())) return "ASSIGNED";
-        if ("N".equals(todo.getTodoDraftYn())) return "DRAFT";
         return "IN_PROGRESS";
     }
 
@@ -207,6 +287,26 @@ public class MentorService {
         return new MenteeProgressResponseDto(menteeId, menteeNames.getOrDefault(menteeId, "알 수 없는 멘티"), overallProgress, subjectProgressList);
     }
 
+
+    // 담당 멘티 목록 조회
+    public MenteeListResponseDto getMenteeList(Long mentorId) {
+        List<Long> menteeIds = getMenteeIdsByMentorId(mentorId);
+        Map<Long, String> menteeNames = getMenteeNames(menteeIds);
+
+        List<MenteeListResponseDto.MenteeDetailItem> items = menteeIds.stream()
+                .map(menteeId -> {
+                    MenteeDetailsResponseDto details = getMenteeDetails(mentorId, menteeId);
+                    return new MenteeListResponseDto.MenteeDetailItem(
+                            menteeId,
+                            menteeNames.getOrDefault(menteeId, "알 수 없는 멘티"),
+                            details
+                    );
+                })
+                .sorted(Comparator.comparing(MenteeListResponseDto.MenteeDetailItem::menteeName))
+                .toList();
+
+        return new MenteeListResponseDto(items);
+    }
 
     // 멘토가 관리하는 멘티 ID 목록을 가져오는 실제 로직
     private List<Long> getMenteeIdsByMentorId(Long mentorId) {

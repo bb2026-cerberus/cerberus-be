@@ -2,6 +2,7 @@ package kr.co.cerberus.feature.feedback.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import kr.co.cerberus.feature.feedback.dto.FeedbackWeeklyBySubjectResponseDto;
 import kr.co.cerberus.feature.feedback.dto.FeedbackWeeklyResponseDto;
 import kr.co.cerberus.feature.feedback.dto.FeedbackDetailResponseDto;
 import kr.co.cerberus.feature.feedback.dto.FeedbackSaveRequestDto;
@@ -32,6 +33,15 @@ public class FeedbackController {
             @RequestParam(defaultValue = "ASSIGNMENT") String type, // ASSIGNMENT, TODO
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         FeedbackWeeklyResponseDto response = feedbackService.getWeeklyFeedbacks(mentorId, menteeId, date, type);
+        return ResponseEntity.ok(CommonResponse.of(response));
+    }
+
+    @Operation(summary = "주간 과목별 피드백 목록 조회", description = "입력된 날짜가 포함된 주차의 과목별 주간 피드백 요약과 피드백 목록을 조회합니다.")
+    @GetMapping("/weekly/by-subject")
+    public ResponseEntity<CommonResponse<FeedbackWeeklyBySubjectResponseDto>> getWeeklyFeedbacksBySubject(
+            @RequestParam Long menteeId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        FeedbackWeeklyBySubjectResponseDto response = feedbackService.getWeeklyFeedbacksBySubject(menteeId, date, "ALL");
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 

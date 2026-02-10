@@ -6,12 +6,14 @@ import lombok.Builder;
 @Builder
 public record LoginResponseDto (
         Long id,
-        String role
+        String role,
+        String name
 ) {
     public static LoginResponseDto from(Member member) {
         return LoginResponseDto.builder()
                 .id(member.getId())
                 .role(member.getRole().name())
+                .name(member.getMemName())
                 .build();
     }
 }
