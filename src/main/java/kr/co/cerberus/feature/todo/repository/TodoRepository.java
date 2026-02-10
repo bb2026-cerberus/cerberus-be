@@ -52,7 +52,7 @@ public interface TodoRepository extends JpaRepository<Todo, Long> {
 	// 멘티 ID, 과목별 모든 할 일을 가져옴
 	List<Todo> findByMenteeIdAndTodoSubjects(Long menteeId, String todoSubjects);
 	
-	List<Todo> findByMenteeIdInAndTodoDateBetween(Collection<Long> menteeIds, LocalDate todoDateAfter, LocalDate todoDateBefore);
+	List<Todo> findByMenteeIdInAndTodoDateBetweenAndDeleteYn(Collection<Long> menteeIds, LocalDate todoDateAfter, LocalDate todoDateBefore, String deleteYn);
 	
 	List<Todo> findByMenteeIdAndTodoDateBetweenAndDeleteYn(Long menteeId, LocalDate startDate, LocalDate endDate, String deleteYn);
 

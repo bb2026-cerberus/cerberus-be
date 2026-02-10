@@ -3,12 +3,14 @@ package kr.co.cerberus.feature.feedback.service;
 import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.dto.FeedbackDetailResponseDto;
 import kr.co.cerberus.feature.feedback.dto.FeedbackSaveRequestDto;
+import kr.co.cerberus.feature.feedback.dto.FeedbackWeeklyBySubjectResponseDto;
 import kr.co.cerberus.feature.feedback.dto.FeedbackWeeklyResponseDto;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
 import kr.co.cerberus.feature.member.Member;
 import kr.co.cerberus.feature.member.repository.MemberRepository;
 import kr.co.cerberus.feature.relation.Relation;
 import kr.co.cerberus.feature.relation.repository.RelationRepository;
+import kr.co.cerberus.feature.report.service.WeeklyReportService;
 import kr.co.cerberus.feature.todo.Todo;
 import kr.co.cerberus.feature.todo.repository.TodoRepository;
 import kr.co.cerberus.global.error.CustomException;
@@ -45,6 +47,7 @@ public class FeedbackService {
     private final RelationRepository relationRepository;
     private final FileStorageService fileStorageService;
     private final ChatClient chatClient;
+    private final WeeklyReportService weeklyReportService;
 
     public FeedbackService(
             FeedbackRepository feedbackRepository,
@@ -52,13 +55,15 @@ public class FeedbackService {
             MemberRepository memberRepository,
             RelationRepository relationRepository,
             FileStorageService fileStorageService,
-            ChatClient.Builder chatClientBuilder) {
+            ChatClient.Builder chatClientBuilder,
+            WeeklyReportService weeklyReportService) {
         this.feedbackRepository = feedbackRepository;
         this.todoRepository = todoRepository;
         this.memberRepository = memberRepository;
         this.relationRepository = relationRepository;
         this.fileStorageService = fileStorageService;
         this.chatClient = chatClientBuilder.build();
+        this.weeklyReportService = weeklyReportService;
     }
 
     /**
@@ -214,7 +219,7 @@ public class FeedbackService {
         Map<Long, String> menteeNameMap = memberRepository.findAllById(targetMenteeIds).stream()
                 .collect(Collectors.toMap(Member::getId, Member::getMemName));
 
-        List<Todo> todos = todoRepository.findByMenteeIdInAndTodoDateBetween(targetMenteeIds, mondayDate, sundayDate);
+        List<Todo> todos = todoRepository.findByMenteeIdInAndTodoDateBetweenAndDeleteYn(targetMenteeIds, mondayDate, sundayDate, "N");
         
         if (!"ALL".equalsIgnoreCase(type)) {
             String assignYn = "ASSIGNMENT".equalsIgnoreCase(type) ? "Y" : "N";
@@ -316,6 +321,48 @@ public class FeedbackService {
                             .build())
                     .build();
         }).filter(Objects::nonNull).toList();
+    }
+
+    /**
+     * 주간 과목별 피드백 목록 조회
+     */
+    public FeedbackWeeklyBySubjectResponseDto getWeeklyFeedbacksBySubject(Long mentorId, Long menteeId, LocalDate date, String type) {
+        LocalDate mondayDate = date.with(DayOfWeek.MONDAY);
+
+        FeedbackWeeklyResponseDto weeklyResult = getWeeklyFeedbacks(mentorId, menteeId, date, type);
+        List<FeedbackWeeklyResponseDto.TodoWithFeedbackDto> allItems = weeklyResult.groupedItems().values().stream()
+                .flatMap(List::stream)
+                .toList();
+
+        Map<String, List<FeedbackWeeklyBySubjectResponseDto.FeedbackDetailDto>> groupedBySubject = allItems.stream()
+                .filter(item -> item.feedback() != null)
+                .collect(Collectors.groupingBy(
+                        item -> item.todoSubjects() != null ? item.todoSubjects() : "기타",
+                        TreeMap::new,
+                        Collectors.mapping(item -> {
+                            FeedbackWeeklyResponseDto.FeedbackDetailDto fb = item.feedback();
+                            return FeedbackWeeklyBySubjectResponseDto.FeedbackDetailDto.builder()
+                                    .todoId(item.todoId())
+                                    .menteeId(item.menteeId())
+                                    .todoSubjects(item.todoSubjects())
+                                    .feedbackId(fb.feedbackId())
+                                    .content(fb.content())
+                                    .summary(fb.summary())
+                                    .draftYn(fb.draftYn())
+                                    .completeYn(fb.completeYn())
+                                    .build();
+                        }, Collectors.toList())
+                ));
+
+        // 이번 주 피드백 요약
+        String feedbackSummary = weeklyReportService.getMenteeWeeklyFeedbackSummary(menteeId, mondayDate);
+
+        return FeedbackWeeklyBySubjectResponseDto.builder()
+                .weekInfo(weeklyResult.weekInfo())
+                .mondayDate(weeklyResult.mondayDate())
+                .summary(feedbackSummary)
+                .feedback(groupedBySubject)
+                .build();
     }
 
     private String calculateWeekInfo(LocalDate date) {
