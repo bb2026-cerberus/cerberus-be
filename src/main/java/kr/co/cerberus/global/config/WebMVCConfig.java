@@ -2,12 +2,18 @@ package kr.co.cerberus.global.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * 웹 MVC 설정 (CORS 설정 포함)
  *
@@ -28,6 +34,11 @@ public class WebMVCConfig implements WebMvcConfigurer {
 
     @Value("${file.upload-dir}")
     private String uploadDir;
+    private final MappingJackson2HttpMessageConverter jacksonConverter;
+
+    public WebMVCConfig(MappingJackson2HttpMessageConverter jacksonConverter) {
+        this.jacksonConverter = jacksonConverter;
+    }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
@@ -47,5 +58,13 @@ public class WebMVCConfig implements WebMvcConfigurer {
 
         registry.addResourceHandler(pathPattern)
                 .addResourceLocations(resourceLocation);
+    }
+
+    @Override
+    public void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+        jacksonConverter.setSupportedMediaTypes(Arrays.asList(
+                MediaType.APPLICATION_JSON,
+                new MediaType("application", "octet-stream")
+        ));
     }
 }
