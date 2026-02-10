@@ -398,11 +398,16 @@ public class TodoService {
 			} catch (Exception e) {
 				log.error("Error parsing timer JSON for todoId={}", todo.getId(), e);
 			}
-
 			if (!sessionDtos.isEmpty()) {
 				items.add(TodoTimerDailyResponseDto.TodoTimerItem.builder()
-						.todoId(todo.getId()).title(todo.getTodoName()).subject(todo.getTodoSubjects())
-						.totalMinutes(todoTotalMinutes).sessions(sessionDtos).build());
+						.todoId(todo.getId())
+                        .title(todo.getTodoName())
+                        .subject(todo.getTodoSubjects())
+                        .note(todo.getTodoNote())
+                        .name(todo.getTodoName())
+                        .assignYn(todo.getTodoAssignYn())
+						.totalMinutes(todoTotalMinutes)
+                        .sessions(sessionDtos).build());
 			}
 		}
 
