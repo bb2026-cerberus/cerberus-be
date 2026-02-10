@@ -39,10 +39,9 @@ public class FeedbackController {
     @Operation(summary = "주간 과목별 피드백 목록 조회", description = "입력된 날짜가 포함된 주차의 과목별 주간 피드백 요약과 피드백 목록을 조회합니다.")
     @GetMapping("/weekly/by-subject")
     public ResponseEntity<CommonResponse<FeedbackWeeklyBySubjectResponseDto>> getWeeklyFeedbacksBySubject(
-            @RequestParam Long mentorId,
-            @RequestParam(required = false) Long menteeId,
+            @RequestParam Long menteeId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
-        FeedbackWeeklyBySubjectResponseDto response = feedbackService.getWeeklyFeedbacksBySubject(mentorId, menteeId, date, "ALL");
+        FeedbackWeeklyBySubjectResponseDto response = feedbackService.getWeeklyFeedbacksBySubject(menteeId, date, "ALL");
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 

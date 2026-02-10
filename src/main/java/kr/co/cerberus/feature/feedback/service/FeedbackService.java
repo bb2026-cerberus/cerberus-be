@@ -326,10 +326,11 @@ public class FeedbackService {
     /**
      * 주간 과목별 피드백 목록 조회
      */
-    public FeedbackWeeklyBySubjectResponseDto getWeeklyFeedbacksBySubject(Long mentorId, Long menteeId, LocalDate date, String type) {
+    public FeedbackWeeklyBySubjectResponseDto getWeeklyFeedbacksBySubject(Long menteeId, LocalDate date, String type) {
         LocalDate mondayDate = date.with(DayOfWeek.MONDAY);
+        Relation relation = relationRepository.findByMenteeIdAndDeleteYn(menteeId, "N");
 
-        FeedbackWeeklyResponseDto weeklyResult = getWeeklyFeedbacks(mentorId, menteeId, date, type);
+        FeedbackWeeklyResponseDto weeklyResult = getWeeklyFeedbacks(relation.getMentorId(), menteeId, date, type);
         List<FeedbackWeeklyResponseDto.TodoWithFeedbackDto> allItems = weeklyResult.groupedItems().values().stream()
                 .flatMap(List::stream)
                 .toList();
