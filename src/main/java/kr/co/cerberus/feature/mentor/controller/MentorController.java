@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.co.cerberus.feature.mentor.dto.DraftCountResponseDto;
 import kr.co.cerberus.feature.mentor.dto.MenteeDetailsResponseDto;
+import kr.co.cerberus.feature.mentor.dto.MenteeListResponseDto;
 import kr.co.cerberus.feature.mentor.dto.MenteeProgressResponseDto;
 import kr.co.cerberus.feature.mentor.dto.MentorHomeResponseDto;
 import kr.co.cerberus.feature.mentor.service.MentorService;
@@ -54,6 +55,14 @@ public class MentorController {
             @PathVariable Long mentorId,
             @PathVariable Long menteeId) {
         MenteeDetailsResponseDto response = mentorService.getMenteeDetails(mentorId, menteeId);
+        return ResponseEntity.ok(CommonResponse.of(response));
+    }
+
+    @Operation(summary = "담당 멘티 목록 조회", description = "멘토가 담당하는 멘티 목록을 조회합니다.")
+    @GetMapping("/{mentorId}/mentees")
+    public ResponseEntity<CommonResponse<MenteeListResponseDto>> getMenteeList(
+            @PathVariable Long mentorId) {
+        MenteeListResponseDto response = mentorService.getMenteeList(mentorId);
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 }

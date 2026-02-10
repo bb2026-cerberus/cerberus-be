@@ -283,6 +283,26 @@ public class MentorService {
     }
 
 
+    // 담당 멘티 목록 조회
+    public MenteeListResponseDto getMenteeList(Long mentorId) {
+        List<Long> menteeIds = getMenteeIdsByMentorId(mentorId);
+        Map<Long, String> menteeNames = getMenteeNames(menteeIds);
+
+        List<MenteeListResponseDto.MenteeDetailItem> items = menteeIds.stream()
+                .map(menteeId -> {
+                    MenteeDetailsResponseDto details = getMenteeDetails(mentorId, menteeId);
+                    return new MenteeListResponseDto.MenteeDetailItem(
+                            menteeId,
+                            menteeNames.getOrDefault(menteeId, "알 수 없는 멘티"),
+                            details
+                    );
+                })
+                .sorted(Comparator.comparing(MenteeListResponseDto.MenteeDetailItem::menteeName))
+                .toList();
+
+        return new MenteeListResponseDto(items);
+    }
+
     // 멘토가 관리하는 멘티 ID 목록을 가져오는 실제 로직
     private List<Long> getMenteeIdsByMentorId(Long mentorId) {
         return relationRepository.findByMentorId(mentorId)
