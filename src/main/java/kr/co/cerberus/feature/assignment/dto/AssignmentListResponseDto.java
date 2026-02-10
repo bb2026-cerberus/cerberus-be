@@ -8,7 +8,7 @@ import java.time.LocalDate;
 @Getter
 @Builder
 public class AssignmentListResponseDto {
-	private Long assignmentId;
+	private Long todoId;
 	private String title;
 	private String subject;
 	private String solution;

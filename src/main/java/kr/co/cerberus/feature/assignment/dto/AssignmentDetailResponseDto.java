@@ -13,8 +13,8 @@ import java.util.List;
 @Builder
 @Schema(description = "과제 상세 응답 DTO")
 public class AssignmentDetailResponseDto {
-	@Schema(description = "과제 ID", example = "1")
-	private Long assignmentId;
+	@Schema(description = "할일 ID", example = "1")
+	private Long todoId;
 	@Schema(description = "과제 제목", example = "Spring Boot 과제")
 	private String title;
 	@Schema(description = "과제 내용", example = "게시판 CRUD 구현하기")

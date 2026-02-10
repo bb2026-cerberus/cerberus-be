@@ -68,7 +68,7 @@ public class AssignmentService {
         assignments.sort(Comparator.comparing(Todo::getTodoDate).reversed());
 		Map<LocalDate, List<AssignmentListResponseDto>> groupedAssignments = assignments.stream()
 				.map(todo -> AssignmentListResponseDto.builder()
-							.assignmentId(todo.getId())
+							.todoId(todo.getId())
 							.title(todo.getTodoName())
 							.subject(todo.getTodoSubjects())
 							.solution(solutionTitleMap.get(todo.getSolutionId()))
@@ -113,7 +113,7 @@ public class AssignmentService {
 		assignments.sort(Comparator.comparing(Todo::getTodoDate).reversed());
 		Map<LocalDate, List<AssignmentListResponseDto>> groupedAssignments = assignments.stream()
 				.map(todo -> AssignmentListResponseDto.builder()
-						.assignmentId(todo.getId())
+						.todoId(todo.getId())
 						.title(todo.getTodoName())
 						.subject(todo.getTodoSubjects())
 						.solution(solutionTitleMap.get(todo.getSolutionId()))
@@ -280,7 +280,7 @@ public class AssignmentService {
 		}
 
 		return AssignmentDetailResponseDto.builder()
-				.assignmentId(todo.getId())
+				.todoId(todo.getId())
 				.title(todo.getTodoName())
 				.content(todo.getTodoNote())
 				.solution(solutionTitle)

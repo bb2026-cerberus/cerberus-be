@@ -208,9 +208,9 @@ public class MentorService {
     }
 
     private String determineStatus(Todo todo) {
+        if ("Y".equals(todo.getTodoDraftYn())) return "DRAFT";
         if ("Y".equals(todo.getTodoCompleteYn())) return "COMPLETED";
         if ("Y".equals(todo.getTodoAssignYn())) return "ASSIGNED";
-        if ("N".equals(todo.getTodoDraftYn())) return "DRAFT";
         return "IN_PROGRESS";
     }
 
