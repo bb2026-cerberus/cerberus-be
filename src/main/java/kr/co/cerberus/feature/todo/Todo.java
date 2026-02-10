@@ -41,6 +41,9 @@ public class Todo extends BaseEntity {
 	@Column(name = "todo_date", nullable = false)
 	private LocalDate todoDate;
 
+	@Column(name = "scheduled_time")
+	private java.time.LocalTime scheduledTime;
+
 	@Column(name = "todo_name", nullable = false)
 	private String todoName;
 
@@ -126,5 +129,14 @@ public class Todo extends BaseEntity {
 	// 과제 할당 상태로 설정
 	public void assign() {
 		this.todoAssignYn = "Y";
+	}
+
+	public void update(String title, String content, String subjects, LocalDate date, java.time.LocalTime scheduledTime, Long solutionId) {
+		this.todoName = title;
+		this.todoNote = content;
+		this.todoSubjects = subjects;
+		this.todoDate = date;
+		this.scheduledTime = scheduledTime;
+		this.solutionId = solutionId;
 	}
 }

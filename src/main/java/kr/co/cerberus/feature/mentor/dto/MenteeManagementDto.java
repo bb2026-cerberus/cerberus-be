@@ -7,7 +7,8 @@ public record MenteeManagementDto(
     String menteeName,
     int completedCount,
     int totalCount,
-    List<String> unsubmittedTitles // 미제출된 과제 제목 리스트
+    List<String> unsubmittedTitles,
+    String pendingLabel
 ) {
     // 진행률 계산 메서드 (옵션)
     public double getProgressRate() {

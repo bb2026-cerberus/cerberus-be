@@ -24,10 +24,13 @@ spring:
 
 server:
   forward-headers-strategy: framework
-
 file:
   upload-dir: ./uploads
 
+webpush:
+  "subject": "mailto: <dev@cerberus.co.kr>"
+  "publicKey": "BH4cz0A_sVYH-fP1NgV02i3a6RmUNxnyiRNiZxl7-nFdnh4Om8KZl_QYOHLuycl1scKf_mw3CYP7NED3SkUadc0"
+  "privateKey": "BkTwt8tvHeet6sAp3iogbElyM9DdNsUXLbhU3QJUVG0"
 #jwt:
 #  access:
 #    expiration: 10800000

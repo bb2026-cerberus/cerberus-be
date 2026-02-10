@@ -10,8 +10,13 @@ import java.time.LocalDate;
 public class TodoListResponseDto {
 	private Long todoId;
 	private String title;
+	private String content;
 	private String subject;
 	private String solution;
 	private LocalDate date;
 	private boolean completed;
+	private Long menteeId;
+	private String menteeName;
+	private String assignYn;
+	private String draftYn;
 }
