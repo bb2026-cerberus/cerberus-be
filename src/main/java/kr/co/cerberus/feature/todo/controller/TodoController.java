@@ -62,6 +62,23 @@ public class TodoController {
 		return ResponseEntity.ok(CommonResponse.of(detail));
 	}
 
+	@Operation(summary = "할일 수정", description = "기존 할일 정보를 수정합니다.")
+	@PutMapping("/{todoId}")
+	public ResponseEntity<CommonResponse<TodoCreateResponseDto>> updateTodo(
+			@Parameter(description = "할일 ID", example = "1") @PathVariable(name = "todoId") Long todoId,
+			@Parameter(description = "수정할 할일 정보", required = true) @RequestBody TodoCreateRequestDto request) {
+		TodoCreateResponseDto updated = todoService.updateTodo(todoId, request);
+		return ResponseEntity.ok(CommonResponse.of(updated));
+	}
+
+	@Operation(summary = "할일 삭제", description = "할일을 삭제합니다.")
+	@DeleteMapping("/{todoId}")
+	public ResponseEntity<CommonResponse<Void>> deleteTodo(
+			@Parameter(description = "할일 ID", example = "1") @PathVariable(name = "todoId") Long todoId) {
+		todoService.deleteTodo(todoId);
+		return ResponseEntity.ok(CommonResponse.of(null));
+	}
+
 	@Operation(summary = "할일 등록", description = "새로운 할일을 등록합니다. 과목(subject)은 KOREAN, ENGLISH, MATH 중 하나여야 합니다.")
 	@PostMapping
 	public ResponseEntity<CommonResponse<TodoCreateResponseDto>> createTodo(
@@ -102,6 +119,16 @@ public class TodoController {
 			@Parameter(description = "할일 ID", example = "1") @PathVariable(name = "todoId") Long todoId) {
 		todoService.markComplete(todoId);
 		return ResponseEntity.ok(CommonResponse.of(null));
+	}
+
+	@Operation(summary = "할일 학습지 파일 업로드", description = "할일에 대한 학습지/파일을 업로드합니다.")
+	@PostMapping(value = "/{todoId}/files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public ResponseEntity<CommonResponse<VerificationResponseDto>> uploadTodoFile(
+			@Parameter(description = "할일 ID", example = "1") @PathVariable(name = "todoId") Long todoId,
+			@Parameter(description = "학습지 파일 (여러 개 가능)", required = true) @RequestPart("files") List<MultipartFile> files) {
+
+		VerificationResponseDto response = todoService.uploadTodoFile(todoId, files);
+		return ResponseEntity.ok(CommonResponse.of(response));
 	}
 
 	@Operation(summary = "할일 인증 사진 업로드", description = "할일에 대한 공부 인증 사진을 업로드합니다.")

@@ -127,4 +127,12 @@ public class Todo extends BaseEntity {
 	public void assign() {
 		this.todoAssignYn = "Y";
 	}
+
+	public void update(String title, String content, String subjects, LocalDate date, Long solutionId) {
+		this.todoName = title;
+		this.todoNote = content;
+		this.todoSubjects = subjects;
+		this.todoDate = date;
+		this.solutionId = solutionId;
+	}
 }

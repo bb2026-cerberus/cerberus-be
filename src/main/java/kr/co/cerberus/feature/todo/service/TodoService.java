@@ -167,9 +167,10 @@ public class TodoService {
 				.title(todo.getTodoName())
 				.content(todo.getTodoNote())
 				.solution(solutionTitle)
+				.solutionId(todo.getSolutionId())
 				.date(todo.getTodoDate())
 				.todoCompleted("Y".equals(todo.getTodoCompleteYn()))
-				.feedbackCompleted("Y".equals(feedback.getFeedCompleteYn()))
+				.feedbackCompleted("Y".equals(feedback != null && "Y".equals(feedback.getFeedCompleteYn()) ? "Y" : "N"))
 				.subject(todo.getTodoSubjects())
 				.workbooks(solutionWorkbooks)
 				.studyVerificationImages(verificationImages)
@@ -241,6 +242,31 @@ public class TodoService {
 	public void markComplete(Long todoId) {
 		Todo todo = findById(todoId);
 		todo.markComplete();
+	}
+
+	@Transactional
+	public VerificationResponseDto uploadTodoFile(Long todoId, List<MultipartFile> files) {
+		Todo todo = todoRepository.findById(todoId)
+				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+
+		List<FileInfo> fileInfos = files.stream()
+				.map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "todos"), null))
+				.toList();
+
+		TodoFileData existing = JsonbUtils.fromJson(todo.getTodoFile(), TodoFileData.class);
+		TodoFileData updated = (existing != null)
+				? existing.updateWorkbooks(fileInfos)
+				: TodoFileData.withWorkbooks(fileInfos);
+
+		todo.updateTodoFile(JsonbUtils.toJson(updated));
+
+		List<String> imageUrls = fileInfos.stream()
+				.map(FileInfo::getFileUrl)
+				.toList();
+
+		return VerificationResponseDto.builder()
+				.imageUrls(imageUrls)
+				.build();
 	}
 
 	@Transactional
@@ -332,17 +358,48 @@ public class TodoService {
 		return todo;
 	}
 
-    @Transactional
-    public void addTimerSession(Long todoId, TodoTimerSessionCreateRequestDto request) {
-        Todo todo =todoRepository.findById(todoId)
-                .orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+	@Transactional
+	public void addTimerSession(Long todoId, TodoTimerSessionCreateRequestDto request) {
+		Todo todo = todoRepository.findById(todoId)
+				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
-        if (request.getEndAt().isBefore(request.getStartAt())) {
-            throw new CustomException(ErrorCode.INVALID_PARAMETER, "종료 시간이 시작 시간보다 빠릅니다.");
-        }
+		if (request.getEndAt().isBefore(request.getStartAt())) {
+			throw new CustomException(ErrorCode.INVALID_PARAMETER, "종료 시간이 시작 시간보다 빠릅니다.");
+		}
 
-        todo.addTimerSession(request.getStartAt(), request.getEndAt());
-    }
+		todo.addTimerSession(request.getStartAt(), request.getEndAt());
+	}
+
+	@Transactional
+	public void deleteTodo(Long todoId) {
+		Todo todo = todoRepository.findById(todoId)
+				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+		todo.delete();
+	}
+
+	@Transactional
+	public TodoCreateResponseDto updateTodo(Long todoId, TodoCreateRequestDto request) {
+		Todo todo = todoRepository.findById(todoId)
+				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+
+		todo.update(
+				request.getTitle(),
+				request.getContent(),
+				request.getSubject().getDescription(),
+				request.getDate(),
+				request.getSolutionId()
+		);
+
+		return TodoCreateResponseDto.builder()
+				.todoId(todo.getId())
+				.title(todo.getTodoName())
+				.content(todo.getTodoNote())
+				.subject(todo.getTodoSubjects())
+				.solution(solutionService.getSolutionTitleById(todo.getSolutionId()))
+				.date(todo.getTodoDate())
+				.completed("Y".equals(todo.getTodoCompleteYn()))
+				.build();
+	}
 
 	@Transactional
 	public void deleteDraftTodo(Long todoId) {

@@ -21,6 +21,8 @@ public class TodoDetailResponseDto {
 	private String content;
 	@Schema(description = "보완점", example = "첨부 파일 또는 추가 설명")
 	private String solution;
+	@Schema(description = "보완점 ID", example = "1")
+	private Long solutionId;
 	@Schema(description = "할일 날짜", example = "2024-01-01")
 	private LocalDate date;
 	@Schema(description = "할일 과목", example = "수학")
