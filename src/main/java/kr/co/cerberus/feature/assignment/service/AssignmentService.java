@@ -4,6 +4,8 @@ import kr.co.cerberus.feature.assignment.dto.*;
 import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.dto.FeedbackDetailResponseDto;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
+import kr.co.cerberus.feature.member.Member;
+import kr.co.cerberus.feature.member.repository.MemberRepository;
 import kr.co.cerberus.feature.solution.Solution;
 import kr.co.cerberus.feature.solution.repository.SolutionRepository;
 import kr.co.cerberus.feature.solution.service.SolutionService;
@@ -36,20 +38,17 @@ public class AssignmentService {
 	private final SolutionRepository solutionRepository;
 	private final SolutionService solutionService;
 	private final FileStorageService fileStorageService;
+	private final MemberRepository memberRepository;
 
-	public List<GroupedAssignmentsResponseDto> findAssignments(Long menteeId, LocalDate startDate, LocalDate endDate) {
+	public List<GroupedAssignmentsResponseDto> findAssignments(List<Long> menteeIds, LocalDate startDate, LocalDate endDate) {
 		List<Todo> assignments;
 
-		if(menteeId == null) {
-			assignments = todoRepository.findAllByTodoDateBetweenAndTodoAssignYnAndDeleteYnOrderByMenteeId(startDate, endDate, "Y", "N");
+		if (startDate == null) {
+			assignments = todoRepository.findByMenteeIdInAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeIds, "Y", "N", "N");
+		} else if (endDate == null) {
+			assignments = todoRepository.findByMenteeIdInAndTodoDateAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeIds, startDate, "Y", "N", "N");
 		} else {
-			if (startDate == null) {
-				assignments = todoRepository.findByMenteeIdAndTodoAssignYnAndDeleteYn(menteeId, "Y", "N");
-			} else if (endDate == null) {
-				assignments = todoRepository.findByMenteeIdAndTodoDateAndTodoAssignYnAndDeleteYn(menteeId, startDate, "Y", "N");
-			} else {
-				assignments = todoRepository.findByMenteeIdAndTodoDateBetweenAndTodoAssignYnAndDeleteYn(menteeId, startDate, endDate, "Y", "N");
-			}
+			assignments = todoRepository.findByMenteeIdInAndTodoDateBetweenAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeIds, startDate, endDate, "Y", "N", "N");
 		}
 
 		Set<Long> solutionIds = assignments.stream()
@@ -58,6 +57,13 @@ public class AssignmentService {
 				.collect(Collectors.toSet());
 
 		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionContent(solutionIds);
+
+		// 멘티 이름 수집
+		Set<Long> distinctMenteeIds = assignments.stream()
+				.map(Todo::getMenteeId)
+				.collect(Collectors.toSet());
+		Map<Long, String> menteeNameMap = memberRepository.findAllById(distinctMenteeIds).stream()
+				.collect(Collectors.toMap(Member::getId, Member::getMemName));
 
         assignments.sort(Comparator.comparing(Todo::getTodoDate).reversed());
 		Map<LocalDate, List<AssignmentListResponseDto>> groupedAssignments = assignments.stream()
@@ -68,6 +74,8 @@ public class AssignmentService {
 							.solution(solutionTitleMap.get(todo.getSolutionId()))
 							.date(todo.getTodoDate())
 							.completed("Y".equals(todo.getTodoCompleteYn()))
+							.menteeId(todo.getMenteeId())
+							.menteeName(menteeNameMap.getOrDefault(todo.getMenteeId(), "알 수 없음"))
 							.build())
 				.collect(Collectors.groupingBy(AssignmentListResponseDto::getDate, TreeMap::new, Collectors.toList()));
 
@@ -79,10 +87,49 @@ public class AssignmentService {
 				.toList();
 	}
 
-	public List<GroupedAssignmentsResponseDto> findAssignmentsWeekly(Long menteeId, LocalDate mondayDate) {
+	public List<GroupedAssignmentsResponseDto> findAssignmentsWeekly(List<Long> menteeIds, LocalDate mondayDate) {
 		LocalDate startDate = mondayDate.with(DayOfWeek.MONDAY);
 		LocalDate endDate = mondayDate.plusDays(6);
-		return findAssignments(menteeId, startDate, endDate);
+		return findAssignments(menteeIds, startDate, endDate);
+	}
+
+	public List<GroupedAssignmentsResponseDto> findDraftAssignments(List<Long> menteeIds) {
+		List<Todo> assignments = todoRepository.findByMenteeIdInAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeIds, "Y", "N", "Y");
+
+		Set<Long> solutionIds = assignments.stream()
+				.map(Todo::getSolutionId)
+				.filter(java.util.Objects::nonNull)
+				.collect(Collectors.toSet());
+
+		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionContent(solutionIds);
+
+		// 멘티 이름 수집
+		Set<Long> distinctMenteeIds = assignments.stream()
+				.map(Todo::getMenteeId)
+				.collect(Collectors.toSet());
+		Map<Long, String> menteeNameMap = memberRepository.findAllById(distinctMenteeIds).stream()
+				.collect(Collectors.toMap(Member::getId, Member::getMemName));
+
+		assignments.sort(Comparator.comparing(Todo::getTodoDate).reversed());
+		Map<LocalDate, List<AssignmentListResponseDto>> groupedAssignments = assignments.stream()
+				.map(todo -> AssignmentListResponseDto.builder()
+						.assignmentId(todo.getId())
+						.title(todo.getTodoName())
+						.subject(todo.getTodoSubjects())
+						.solution(solutionTitleMap.get(todo.getSolutionId()))
+						.date(todo.getTodoDate())
+						.completed("Y".equals(todo.getTodoCompleteYn()))
+						.menteeId(todo.getMenteeId())
+						.menteeName(menteeNameMap.getOrDefault(todo.getMenteeId(), "알 수 없음"))
+						.build())
+				.collect(Collectors.groupingBy(AssignmentListResponseDto::getDate, TreeMap::new, Collectors.toList()));
+
+		return groupedAssignments.entrySet().stream()
+				.map(entry -> GroupedAssignmentsResponseDto.builder()
+						.date(entry.getKey())
+						.assignments(entry.getValue())
+						.build())
+				.toList();
 	}
 
 	/**
@@ -112,7 +159,7 @@ public class AssignmentService {
 								file = JsonbUtils.fromJson(fileJson, FileInfo.class);
 							}
 						} catch (Exception e) {
-							// 역직렬화 실패 시 null 처리하여 전체 조회가 실패하지 않도록 함
+							// ignore
 						}
 					}
 
@@ -156,6 +203,46 @@ public class AssignmentService {
 		}
 	}
 
+	@Transactional
+	public void updateAssignment(Long assignmentId, MentorAssignmentCreateRequestDto request, List<MultipartFile> workbooks) {
+		Todo assignment = todoRepository.findById(assignmentId)
+				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+
+		if (!"Y".equals(assignment.getTodoAssignYn())) {
+			throw new CustomException(ErrorCode.INVALID_PARAMETER, "멘토 과제만 수정 가능합니다.");
+		}
+
+		// 파일 업로드 처리 (새로운 파일이 있을 때만 업데이트)
+		String todoFileJson = assignment.getTodoFile();
+		if (workbooks != null && !workbooks.isEmpty()) {
+			List<FileInfo> workbookInfos = workbooks.stream()
+					.map(file -> new FileInfo(file.getOriginalFilename(), fileStorageService.storeFile(file, "assignments"), null))
+					.toList();
+			
+			TodoFileData existing = JsonbUtils.fromJson(assignment.getTodoFile(), TodoFileData.class);
+			TodoFileData updated = (existing != null)
+					? existing.updateWorkbooks(workbookInfos)
+					: TodoFileData.withWorkbooks(workbookInfos);
+			todoFileJson = JsonbUtils.toJson(updated);
+		}
+
+		assignment.update(
+				request.title(),
+				request.content(),
+				request.subject().getDescription(),
+				request.dates().get(0), // 단일 수정 시 첫 번째 날짜 사용
+				request.solutionId()
+		);
+		assignment.updateTodoFile(todoFileJson);
+	}
+
+	@Transactional
+	public void deleteAssignment(Long assignmentId) {
+		Todo assignment = todoRepository.findById(assignmentId)
+				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+		assignment.delete();
+	}
+
 	public AssignmentDetailResponseDto findAssignmentDetail(Long assignmentId) {
 		Todo todo = todoRepository.findById(assignmentId)
 				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
@@ -197,9 +284,10 @@ public class AssignmentService {
 				.title(todo.getTodoName())
 				.content(todo.getTodoNote())
 				.solution(solutionTitle)
+				.solutionId(todo.getSolutionId())
 				.date(todo.getTodoDate())
 				.assignmentCompleted("Y".equals(todo.getTodoCompleteYn()))
-				.feedbackCompleted("Y".equals(feedback.getFeedCompleteYn()))
+				.feedbackCompleted("Y".equals(feedback != null && "Y".equals(feedback.getFeedCompleteYn()) ? "Y" : "N"))
 				.subject(todo.getTodoSubjects())
 				.workbooks(mergedWorkbooks)
 				.studyVerificationImages(verificationImages)

@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.co.cerberus.feature.assignment.dto.AssignmentDetailResponseDto;
 import kr.co.cerberus.feature.assignment.dto.GroupedAssignmentsResponseDto;
+import kr.co.cerberus.feature.assignment.dto.MentorAssignmentCreateRequestDto;
 import kr.co.cerberus.feature.assignment.service.AssignmentService;
 import kr.co.cerberus.feature.feedback.service.FeedbackService;
 import kr.co.cerberus.feature.todo.dto.VerificationResponseDto;
@@ -19,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.MediaType;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import jakarta.validation.Valid;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
@@ -38,22 +40,47 @@ public class AssignmentController {
 	@Operation(summary = "과제 목록 조회", description = "전체/기간별/일별 과제 목록을 조회합니다. startDate만 있으면 일별, startDate+endDate는 기간별, 둘 다 없으면 전체 조회")
 	@GetMapping
 	public ResponseEntity<CommonResponse<List<GroupedAssignmentsResponseDto>>> getAssignments(
-			@Parameter(description = "멘티 ID", example = "2") @RequestParam(value = "menteeId") Long menteeId,
+			@Parameter(description = "멘티 ID 목록", example = "2,3") @RequestParam(value = "menteeId") List<Long> menteeIds,
 			@Parameter(description = "시작 날짜 (YYYY-MM-DD), startDate만 있으면 일별, startDate+endDate는 기간별, 둘 다 없으면 전체 조회", example = "2026-02-01") @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
 			@Parameter(description = "종료 날짜 (YYYY-MM-DD)", example = "2026-02-20") @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
-		List<GroupedAssignmentsResponseDto> assignments = assignmentService.findAssignments(menteeId, startDate, endDate);
+		List<GroupedAssignmentsResponseDto> assignments = assignmentService.findAssignments(menteeIds, startDate, endDate);
 		return ResponseEntity.ok(CommonResponse.of(assignments));
 	}
 
 	@Operation(summary = "주차별 과제 목록 조회", description = "특정 주차의 월요일 날짜를 기준으로 해당 주(월~일)의 과제 목록을 조회")
 	@GetMapping("/weekly")
 	public ResponseEntity<CommonResponse<List<GroupedAssignmentsResponseDto>>> getAssignmentsWeekly(
-			@Parameter(description = "멘티 ID", example = "2") @RequestParam(value = "menteeId", required = false) Long menteeId,
+			@Parameter(description = "멘티 ID 목록", example = "2,3") @RequestParam(value = "menteeId") List<Long> menteeIds,
 			@Parameter(description = "주차의 월요일 날짜 (YYYY-MM-DD)", example = "2026-02-02") @RequestParam(value = "mondayDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate mondayDate) {
 
-		List<GroupedAssignmentsResponseDto> weeklyAssignments = assignmentService.findAssignmentsWeekly(menteeId, mondayDate);
+		List<GroupedAssignmentsResponseDto> weeklyAssignments = assignmentService.findAssignmentsWeekly(menteeIds, mondayDate);
 		return ResponseEntity.ok(CommonResponse.of(weeklyAssignments));
+	}
+
+	@Operation(summary = "과제 수정", description = "기존 과제 정보를 수정합니다.")
+	@PutMapping("/{assignmentId}")
+	public ResponseEntity<CommonResponse<Void>> updateAssignment(
+			@PathVariable Long assignmentId,
+			@Valid @RequestPart("request") MentorAssignmentCreateRequestDto request,
+			@RequestPart(value = "workbooks", required = false) List<MultipartFile> workbooks) {
+		assignmentService.updateAssignment(assignmentId, request, workbooks);
+		return ResponseEntity.ok(CommonResponse.of(null));
+	}
+
+	@Operation(summary = "과제 삭제", description = "과제를 삭제합니다.")
+	@DeleteMapping("/{assignmentId}")
+	public ResponseEntity<CommonResponse<Void>> deleteAssignment(@PathVariable Long assignmentId) {
+		assignmentService.deleteAssignment(assignmentId);
+		return ResponseEntity.ok(CommonResponse.of(null));
+	}
+
+	@Operation(summary = "임시저장 과제 목록 조회", description = "임시저장된 과제 목록을 조회합니다.")
+	@GetMapping("/drafts")
+	public ResponseEntity<CommonResponse<List<GroupedAssignmentsResponseDto>>> getDraftAssignments(
+			@Parameter(description = "멘티 ID 목록", example = "2,3") @RequestParam(value = "menteeId") List<Long> menteeIds) {
+		List<GroupedAssignmentsResponseDto> drafts = assignmentService.findDraftAssignments(menteeIds);
+		return ResponseEntity.ok(CommonResponse.of(drafts));
 	}
 
 	@Operation(summary = "과제 상세 조회", description = "과제 ID를 기반으로 상세 정보를 조회")

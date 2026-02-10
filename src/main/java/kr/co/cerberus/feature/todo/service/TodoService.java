@@ -90,9 +90,9 @@ public class TodoService {
 				.toList();
 	}
 
-	public List<GroupedTodosResponseDto> findDraftTodos(Long menteeId) {
+	public List<GroupedTodosResponseDto> findDraftTodos(List<Long> menteeIds) {
 		// TODO: 보안 - 현재 로그인한 사용자가 요청한 menteeId에 접근 권한이 있는지 검증 필요
-		List<Todo> todos = todoRepository.findByMenteeIdAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeId, "N", "N", "Y");
+		List<Todo> todos = todoRepository.findByMenteeIdInAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeIds, "N", "N", "Y");
 
 		Set<Long> solutionIds = todos.stream()
 				.map(Todo::getSolutionId)
@@ -101,10 +101,12 @@ public class TodoService {
 
 		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionContent(solutionIds);
 
-		// 멘티 이름 (단일 멘티)
-		String menteeName = memberRepository.findById(menteeId)
-				.map(Member::getMemName)
-				.orElse("알 수 없음");
+		// 멘티 이름 수집
+		Set<Long> distinctMenteeIds = todos.stream()
+				.map(Todo::getMenteeId)
+				.collect(Collectors.toSet());
+		Map<Long, String> menteeNameMap = memberRepository.findAllById(distinctMenteeIds).stream()
+				.collect(Collectors.toMap(Member::getId, Member::getMemName));
 
 		todos.sort(Comparator.comparing(Todo::getTodoDate).reversed());
 		Map<LocalDate, List<TodoListResponseDto>> groupedTodos = todos.stream()
@@ -116,7 +118,7 @@ public class TodoService {
 						.date(todo.getTodoDate())
 						.completed("Y".equals(todo.getTodoCompleteYn()))
 						.menteeId(todo.getMenteeId())
-						.menteeName(menteeName)
+						.menteeName(menteeNameMap.getOrDefault(todo.getMenteeId(), "알 수 없음"))
 						.build())
 				.collect(Collectors.groupingBy(TodoListResponseDto::getDate, TreeMap::new, Collectors.toList()));
 
@@ -229,6 +231,34 @@ public class TodoService {
 				.solution(solutionService.getSolutionTitleById(saved.getSolutionId()))
 				.date(saved.getTodoDate())
 				.completed("Y".equals(saved.getTodoCompleteYn()))
+				.build();
+	}
+
+	@Transactional
+	public TodoCreateResponseDto updateDraftTodo(Long todoId, TodoCreateRequestDto request) {
+		Todo todo = todoRepository.findById(todoId)
+				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+
+		if (!"Y".equals(todo.getTodoDraftYn())) {
+			throw new CustomException(ErrorCode.INVALID_PARAMETER, "임시저장된 과제만 수정 가능합니다.");
+		}
+
+		todo.update(
+				request.getTitle(),
+				request.getContent(),
+				request.getSubject().getDescription(),
+				request.getDate(),
+				request.getSolutionId()
+		);
+
+		return TodoCreateResponseDto.builder()
+				.todoId(todo.getId())
+				.title(todo.getTodoName())
+				.content(todo.getTodoNote())
+				.subject(todo.getTodoSubjects())
+				.solution(solutionService.getSolutionTitleById(todo.getSolutionId()))
+				.date(todo.getTodoDate())
+				.completed("Y".equals(todo.getTodoCompleteYn()))
 				.build();
 	}
 

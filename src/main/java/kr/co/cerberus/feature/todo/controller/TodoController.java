@@ -98,10 +98,19 @@ public class TodoController {
 	@Operation(summary = "할일 임시 저장 목록 조회", description = "임시 저장된 할일 목록을 조회합니다.")
 	@GetMapping("/drafts")
 	public ResponseEntity<CommonResponse<List<GroupedTodosResponseDto>>> getDraftTodos(
-			@Parameter(description = "멘티 ID", example = "2") @RequestParam(value = "menteeId") Long menteeId) {
+			@Parameter(description = "멘티 ID 목록", example = "2,3") @RequestParam(value = "menteeId") List<Long> menteeIds) {
 
-		List<GroupedTodosResponseDto> todos = todoService.findDraftTodos(menteeId);
+		List<GroupedTodosResponseDto> todos = todoService.findDraftTodos(menteeIds);
 		return ResponseEntity.ok(CommonResponse.of(todos));
+	}
+
+	@Operation(summary = "할일 임시 저장 수정", description = "임시 저장된 할일 정보를 수정합니다.")
+	@PutMapping("/drafts/{todoId}")
+	public ResponseEntity<CommonResponse<TodoCreateResponseDto>> updateDraftTodo(
+			@Parameter(description = "할일 ID", example = "1") @PathVariable(name = "todoId") Long todoId,
+			@Parameter(description = "수정할 할일 정보", required = true) @RequestBody TodoCreateRequestDto request) {
+		TodoCreateResponseDto updated = todoService.updateDraftTodo(todoId, request);
+		return ResponseEntity.ok(CommonResponse.of(updated));
 	}
 
 	@Operation(summary = "할일 임시 저장 삭제", description = "임시 저장된 할일을 삭제합니다.")
