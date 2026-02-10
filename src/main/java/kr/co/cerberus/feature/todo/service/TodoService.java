@@ -171,6 +171,7 @@ public class TodoService {
 				.solution(solutionTitle)
 				.solutionId(todo.getSolutionId())
 				.date(todo.getTodoDate())
+				.scheduledTime(todo.getScheduledTime())
 				.todoCompleted("Y".equals(todo.getTodoCompleteYn()))
 				.feedbackCompleted("Y".equals(feedback != null && "Y".equals(feedback.getFeedCompleteYn()) ? "Y" : "N"))
 				.subject(todo.getTodoSubjects())
@@ -188,6 +189,7 @@ public class TodoService {
 				.todoName(request.getTitle())
 				.todoNote(request.getContent())
 				.todoDate(request.getDate())
+				.scheduledTime(request.getScheduledTime())
 				.solutionId(request.getSolutionId())
 				.todoAssignYn("N")
 				.todoCompleteYn("N")
@@ -215,6 +217,7 @@ public class TodoService {
 				.todoName(request.getTitle())
 				.todoNote(request.getContent())
 				.todoDate(request.getDate())
+				.scheduledTime(request.getScheduledTime())
 				.solutionId(request.getSolutionId())
 				.todoAssignYn("N")
 				.todoCompleteYn("N")
@@ -248,6 +251,7 @@ public class TodoService {
 				request.getContent(),
 				request.getSubject().getDescription(),
 				request.getDate(),
+				request.getScheduledTime(),
 				request.getSolutionId()
 		);
 
@@ -417,6 +421,7 @@ public class TodoService {
 				request.getContent(),
 				request.getSubject().getDescription(),
 				request.getDate(),
+				request.getScheduledTime(),
 				request.getSolutionId()
 		);
 

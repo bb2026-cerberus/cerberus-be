@@ -27,6 +27,8 @@ public class AssignmentDetailResponseDto {
 	private Long menteeId;
 	@Schema(description = "과제 날짜", example = "2024-01-01")
 	private LocalDate date;
+	@Schema(description = "과제 시간", example = "11:00")
+	private java.time.LocalTime scheduledTime;
 	@Schema(description = "과제 과목", example = "백엔드")
 	private String subject;
 	@Schema(description = "과제 완료 여부", example = "true")

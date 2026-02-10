@@ -26,6 +26,9 @@ public class TodoCreateRequestDto {
 	@Schema(description = "할일 날짜 (YYYY-MM-DD)", example = "2026-02-08")
 	private LocalDate date;
 
+	@Schema(description = "할일 시간 (HH:mm)", example = "14:30")
+	private java.time.LocalTime scheduledTime;
+
 	@Schema(description = "솔루션 ID", example = "1", nullable = true)
 	private Long solutionId;
 }

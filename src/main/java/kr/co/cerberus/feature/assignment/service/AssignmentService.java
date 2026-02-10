@@ -189,6 +189,7 @@ public class AssignmentService {
 			Todo assignment = Todo.builder()
 					.menteeId(request.menteeId())
 					.todoDate(date)
+					.scheduledTime(request.scheduledTime())
 					.todoName(request.title())
 					.todoNote(request.content())
 					.todoSubjects(request.subject().getDescription())
@@ -231,6 +232,7 @@ public class AssignmentService {
 				request.content(),
 				request.subject().getDescription(),
 				request.dates().get(0), // 단일 수정 시 첫 번째 날짜 사용
+				request.scheduledTime(),
 				request.solutionId()
 		);
 		assignment.updateTodoFile(todoFileJson);
@@ -287,6 +289,7 @@ public class AssignmentService {
 				.solutionId(todo.getSolutionId())
 				.menteeId(todo.getMenteeId())
 				.date(todo.getTodoDate())
+				.scheduledTime(todo.getScheduledTime())
 				.assignmentCompleted("Y".equals(todo.getTodoCompleteYn()))
 				.feedbackCompleted("Y".equals(feedback != null && "Y".equals(feedback.getFeedCompleteYn()) ? "Y" : "N"))
 				.subject(todo.getTodoSubjects())

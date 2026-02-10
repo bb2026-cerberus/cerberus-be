@@ -25,6 +25,8 @@ public class TodoDetailResponseDto {
 	private Long solutionId;
 	@Schema(description = "할일 날짜", example = "2024-01-01")
 	private LocalDate date;
+	@Schema(description = "할일 시간", example = "14:30")
+	private java.time.LocalTime scheduledTime;
 	@Schema(description = "할일 과목", example = "수학")
 	private String subject;
 	@Schema(description = "할일 완료 여부", example = "true")

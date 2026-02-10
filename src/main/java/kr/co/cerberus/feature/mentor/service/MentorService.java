@@ -118,7 +118,6 @@ public class MentorService {
     }
 
     // 멘토 홈 화면 데이터 조회
-// ...
     public MentorHomeResponseDto getMentorHomeData(Long mentorId, LocalDate date) {
         List<Long> menteeIds = getMenteeIdsByMentorId(mentorId);
         if (menteeIds.isEmpty()) {
@@ -171,6 +170,7 @@ public class MentorService {
                         qna.getId(),
                         qna.getMenteeId(),
                         menteeNames.getOrDefault(qna.getMenteeId(), "알 수 없는 멘티"),
+                        qna.getQuestionContent(),
                         "Y".equals(qna.getQnaCompleteYn()) ? "ANSWERED" : "PENDING",
                         qna.getCreateDatetime()
                 ))
@@ -193,12 +193,17 @@ public class MentorService {
                             .map(Todo::getTodoName)
                             .toList();
 
+                    String pendingLabel = unsubmittedTitles.isEmpty() 
+                            ? "오늘의 모든 과제 완료!" 
+                            : "미제출 : " + String.join(", ", unsubmittedTitles);
+
                     return new MenteeManagementDto(
                             menteeId,
                             menteeNames.getOrDefault(menteeId, "알 수 없는 멘티"),
                             completedCount,
                             totalCount,
-                            unsubmittedTitles
+                            unsubmittedTitles,
+                            pendingLabel
                     );
                 })
                 .sorted(Comparator.comparing(MenteeManagementDto::menteeName)) // 이름순 정렬
