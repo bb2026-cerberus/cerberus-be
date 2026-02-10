@@ -321,7 +321,7 @@ public class TodoService {
 		Todo todo = todoRepository.findById(todoId)
 				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
 
-		List<Solution> solutions = solutionRepository.findByMenteeId(todo.getMenteeId());
+		List<Solution> solutions = solutionRepository.findByMenteeIdAndDeleteYn(todo.getMenteeId(), "N");
 
 		return solutions.stream()
 				.map(solution -> {

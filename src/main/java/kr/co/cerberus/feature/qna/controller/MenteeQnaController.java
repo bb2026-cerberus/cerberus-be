@@ -29,11 +29,11 @@ public class MenteeQnaController {
 
 	@Operation(summary = "Q&A 조회", description = "특정 멘티의 특정 날짜 Q&A를 조회합니다.")
 	@GetMapping
-	public ResponseEntity<CommonResponse<QnaResponseDto>> getQna(
+	public ResponseEntity<CommonResponse<List<QnaResponseDto>>> getQna(
 			@Parameter(description = "멘티 ID", required = true, example = "2") @RequestParam(value = "menteeId") Long menteeId,
 			@Parameter(description = "조회 날짜 (YYYY-MM-DD)", required = true, example = "2026-02-09") @RequestParam(value = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
-		QnaResponseDto response = qnaService.getQnaByMenteeIdAndDate(menteeId, date);
+		List<QnaResponseDto> response = qnaService.getQnaByMenteeIdAndDate(menteeId, date);
 		return ResponseEntity.ok(CommonResponse.of(response));
 	}
 

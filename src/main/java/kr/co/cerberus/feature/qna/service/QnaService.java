@@ -26,7 +26,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -136,49 +135,43 @@ public class QnaService {
     }
 
     // 멘티 ID와 날짜로 Q&A 단건 조회
-    public QnaResponseDto getQnaByMenteeIdAndDate(Long menteeId, LocalDate date) {
-        Qna qna = qnaRepository.findByMenteeIdAndQnaDateAndDeleteYn(menteeId, date, "N")
-                .orElse(null);
+    public List<QnaResponseDto> getQnaByMenteeIdAndDate(Long menteeId, LocalDate date) {
+        List<Qna> qna = qnaRepository.findAllByMenteeIdAndQnaDateAndDeleteYnOrderByCreateDatetime(menteeId, date, "N");
         return qna != null ? mapToResponseDto(qna) : null;
     }
 
-    // 멘토별 Q&A 목록 조회 (멘토용)
-    public List<QnaResponseDto> getQnasByMentorId(Long mentorId, Role userRole) {
-        if (userRole != Role.MENTOR) {
-            throw new CustomException(ErrorCode.ACCESS_DENIED, "멘토만 Q&A 목록을 조회할 수 있습니다.");
-        }
-        List<Qna> qnas = qnaRepository.findByMentorId(mentorId);
-        return qnas.stream()
-                .filter(q -> !q.isDeleted())
-                .map(this::mapToResponseDto)
-                .collect(Collectors.toList());
-    }
-	
+	public List<QnaResponseDto> getQnaByMentorIdAndDate(Long mentorId, LocalDate date) {
+		List<Qna> qna = qnaRepository.findByMentorIdAndQnaDateAndDeleteYnOrderByCreateDatetime(mentorId, date, "N");
+		return qna != null ? mapToResponseDto(qna) : null;
+	}
+
 	private QnaResponseDto mapToResponseDto(Qna qna) {
 		return new QnaResponseDto(
-				qna.getId(),
-				qna.getMenteeId(),
-				qna.getMentorId(),
-				qna.getQnaDate(),
-				qna.getQuestionContent(),
-				qna.getAnswerContent(),
-				Optional.ofNullable(JsonbUtils.fromJson(qna.getQnaFile(), new TypeReference<List<kr.co.cerberus.global.jsonb.FileInfo>>() {})).orElse(List.of()),
-				qna.getCreateDatetime(),
-				qna.getUpdateDatetime()
+						qna.getId(),
+						qna.getMenteeId(),
+						qna.getMentorId(),
+						qna.getQnaDate(),
+						qna.getQuestionContent(),
+						qna.getAnswerContent(),
+						Optional.ofNullable(JsonbUtils.fromJson(qna.getQnaFile(), new TypeReference<List<FileInfo>>() {})).orElse(List.of()),
+						qna.getCreateDatetime(),
+						qna.getUpdateDatetime()
 		);
 	}
-	
-	// 멘토와 멘티의 관계 유효성 검증
-	private void validateMentorMenteeRelation(Long mentorId, Long menteeId) {
-		if (!memberRepository.findById(mentorId).map(m -> m.getRole() == Role.MENTOR).orElse(false)) {
-			throw new CustomException(ErrorCode.INVALID_PARAMETER, "유효하지 않은 멘토 ID입니다.");
-		}
-		if (!memberRepository.findById(menteeId).map(m -> m.getRole() == Role.MENTEE).orElse(false)) {
-			throw new CustomException(ErrorCode.INVALID_PARAMETER, "유효하지 않은 멘티 ID입니다.");
-		}
-		if (relationRepository.findByMentorId(mentorId).stream()
-				.noneMatch(r -> r.getMenteeId().equals(menteeId))) {
-			throw new CustomException(ErrorCode.INVALID_PARAMETER, "멘토와 멘티 간의 관계가 존재하지 않습니다.");
-		}
+
+	private List<QnaResponseDto> mapToResponseDto(List<Qna> qnas) {
+		return qnas.stream()
+				.map(qna -> new QnaResponseDto(
+						qna.getId(),
+						qna.getMenteeId(),
+						qna.getMentorId(),
+						qna.getQnaDate(),
+						qna.getQuestionContent(),
+						qna.getAnswerContent(),
+						Optional.ofNullable(JsonbUtils.fromJson(qna.getQnaFile(), new TypeReference<List<FileInfo>>() {})).orElse(List.of()),
+						qna.getCreateDatetime(),
+						qna.getUpdateDatetime())
+				)
+				.toList();
 	}
 }

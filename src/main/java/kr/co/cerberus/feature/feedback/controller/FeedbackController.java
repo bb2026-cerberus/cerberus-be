@@ -40,7 +40,8 @@ public class FeedbackController {
     @GetMapping("/weekly/by-subject")
     public ResponseEntity<CommonResponse<FeedbackWeeklyBySubjectResponseDto>> getWeeklyFeedbacksBySubject(
             @RequestParam Long menteeId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
         FeedbackWeeklyBySubjectResponseDto response = feedbackService.getWeeklyFeedbacksBySubject(menteeId, date, "ALL");
         return ResponseEntity.ok(CommonResponse.of(response));
     }
