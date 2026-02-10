@@ -24,7 +24,8 @@ public class SolutionMenteeController {
     @Operation(summary = "멘티의 약점 솔루션 목록 조회", description = "멘티의 솔루션 목록을 조회합니다.")
     @GetMapping()
     public ResponseEntity<CommonResponse<List<SolutionResponseDto>>> getWeaknessSolutionsByMentee(
-            @RequestParam(value = "menteeId") Long menteeId) {
+            @RequestParam(value = "menteeId") Long menteeId
+    ) {
         List<SolutionResponseDto> response = solutionService.getWeaknessSolutionsByMentee(menteeId);
         return ResponseEntity.ok(CommonResponse.of(response));
     }

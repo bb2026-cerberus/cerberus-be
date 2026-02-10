@@ -65,12 +65,4 @@ public class SolutionController {
         List<SolutionResponseDto> response = solutionService.getWeaknessSolutionsByMentorAndMentee(mentorId, menteeId);
         return ResponseEntity.ok(CommonResponse.of(response));
     }
-
-    @Operation(summary = "멘티의 약점 솔루션 목록 조회", description = "특정 멘티의 솔루션 목록을 조회")
-    @GetMapping("/by-mentee/{mentorId}")
-    public ResponseEntity<CommonResponse<List<SolutionResponseDto>>> getWeaknessSolutionsByMentor(
-            @PathVariable Long menteeId) {
-        List<SolutionResponseDto> response = solutionService.getWeaknessSolutionsByMentee(menteeId);
-        return ResponseEntity.ok(CommonResponse.of(response));
-    }
 }
