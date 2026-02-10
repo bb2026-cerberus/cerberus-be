@@ -36,13 +36,14 @@ public class TodoController {
 	@Operation(summary = "할일/과제 목록 조회", description = "파라미터에 따라 할일 또는 과제 목록을 조회합니다.")
 	@GetMapping
 	public ResponseEntity<CommonResponse<List<GroupedTodosResponseDto>>> getTodos(
-			@Parameter(description = "멘티 ID 목록", example = "2,3") @RequestParam(value = "menteeId") List<Long> menteeIds,
+			@Parameter(description = "멘토 ID", example = "2") @RequestParam(value = "mentorId", required = false) Long mentorId,
+			@Parameter(description = "멘티 ID 목록", example = "2,3") @RequestParam(value = "menteeId", required = false) List<Long> menteeIds,
 			@Parameter(description = "시작 날짜 (YYYY-MM-DD)") @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
 			@Parameter(description = "종료 날짜 (YYYY-MM-DD)") @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
 			@Parameter(description = "과제 여부 (Y/N)", example = "N") @RequestParam(value = "assignYn", defaultValue = "N") String assignYn,
 			@Parameter(description = "임시저장 여부 (Y/N)", example = "N") @RequestParam(value = "draftYn", defaultValue = "N") String draftYn
 	) {
-		List<GroupedTodosResponseDto> todos = todoService.findTodos(menteeIds, startDate, endDate, assignYn, draftYn);
+		List<GroupedTodosResponseDto> todos = todoService.findTodos(mentorId, menteeIds, startDate, endDate, assignYn, draftYn);
 		return ResponseEntity.ok(CommonResponse.of(todos));
 	}
 

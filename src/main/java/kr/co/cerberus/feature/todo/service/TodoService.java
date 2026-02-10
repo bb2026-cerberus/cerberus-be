@@ -1,6 +1,8 @@
 package kr.co.cerberus.feature.todo.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import kr.co.cerberus.feature.relation.Relation;
+import kr.co.cerberus.feature.relation.repository.RelationRepository;
 import kr.co.cerberus.feature.todo.dto.MentorSolutionResponseDto;
 import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.dto.FeedbackDetailResponseDto;
@@ -41,12 +43,19 @@ public class TodoService {
 	private final SolutionService solutionService;
 	private final FileStorageService fileStorageService;
 	private final MemberRepository memberRepository;
+	private final RelationRepository relationRepository;
 
 	/**
 	 * 할일/과제 목록 조회
 	 */
-	public List<GroupedTodosResponseDto> findTodos(List<Long> menteeIds, LocalDate startDate, LocalDate endDate, String assignYn, String draftYn) {
+	public List<GroupedTodosResponseDto> findTodos(Long mentorId, List<Long> menteeIds, LocalDate startDate, LocalDate endDate, String assignYn, String draftYn) {
 		List<Todo> todos;
+
+		if ((menteeIds == null || menteeIds.isEmpty()) && mentorId != null) {
+			menteeIds = relationRepository.findByMentorId(mentorId).stream()
+					.map(Relation::getMenteeId)
+					.collect(Collectors.toList());
+		}
 
 		if (startDate == null) {
 			todos = todoRepository.findByMenteeIdInAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeIds, assignYn, "N", draftYn);
