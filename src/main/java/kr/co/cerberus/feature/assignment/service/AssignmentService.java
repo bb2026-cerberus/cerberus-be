@@ -285,6 +285,7 @@ public class AssignmentService {
 				.content(todo.getTodoNote())
 				.solution(solutionTitle)
 				.solutionId(todo.getSolutionId())
+				.menteeId(todo.getMenteeId())
 				.date(todo.getTodoDate())
 				.assignmentCompleted("Y".equals(todo.getTodoCompleteYn()))
 				.feedbackCompleted("Y".equals(feedback != null && "Y".equals(feedback.getFeedCompleteYn()) ? "Y" : "N"))
