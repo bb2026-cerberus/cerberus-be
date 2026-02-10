@@ -43,7 +43,7 @@ public class WebMVCConfig implements WebMvcConfigurer {
     @Override
     public void addCorsMappings(CorsRegistry registry) {
 		registry.addMapping("/**")		// 모든 경로에 대해 CORS 설정을 적용
-				.allowedOrigins("http://localhost:3000") // 허용할 프론트엔드 도메인
+				.allowedOrigins("http://localhost:3000", "https://www.seolberus.co.kr") // 허용할 프론트엔드 도메인
 				.allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS") // 허용할 HTTP 메서드
 				.allowedHeaders("*")               // 요청 시 허용할 헤더 (JWT 등 커스텀 헤더 포함)
 				.allowCredentials(true)            // 자격 증명 허용 (쿠키, 세션, Authorization 헤더 등)
