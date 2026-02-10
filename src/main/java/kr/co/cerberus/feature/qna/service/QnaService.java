@@ -1,5 +1,6 @@
 package kr.co.cerberus.feature.qna.service;
 
+import kr.co.cerberus.feature.member.Member;
 import kr.co.cerberus.feature.member.Role;
 import kr.co.cerberus.feature.member.repository.MemberRepository;
 import kr.co.cerberus.feature.qna.Qna;
@@ -104,11 +105,15 @@ public class QnaService {
 	
 	// Q&A 답변
 	@Transactional
-	public QnaResponseDto answerQna(Long userId, Role userRole, QnaAnswerRequestDto requestDto) {
-		Qna qna = qnaRepository.findById(requestDto.qnaId())
+	public QnaResponseDto answerQna(QnaAnswerRequestDto requestDto) {
+		Long mentorId = requestDto.mentorId();
+		Qna qna = qnaRepository.findByIdAndDeleteYn(requestDto.qnaId(), "N")
 				.orElseThrow(() -> new CustomException(ErrorCode.RESOURCE_NOT_FOUND));
+
+		Member member = memberRepository.findByIdAndDeleteYn(mentorId, "N")
+				.orElseThrow(() -> new CustomException(ErrorCode.USER_NOT_FOUND));
 		
-		if (!Objects.equals(qna.getMentorId(), userId) || userRole != Role.MENTOR) {
+		if (!Objects.equals(qna.getMentorId(), mentorId) || member.getRole() != Role.MENTOR) {
 			throw new CustomException(ErrorCode.ACCESS_DENIED, "해당 Q&A에 답변할 권한이 없습니다.");
 		}
 		

@@ -3,7 +3,6 @@ package kr.co.cerberus.feature.qna.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import kr.co.cerberus.feature.member.Role;
 import kr.co.cerberus.feature.qna.dto.QnaAnswerRequestDto;
 import kr.co.cerberus.feature.qna.dto.QnaResponseDto;
 import kr.co.cerberus.feature.qna.service.QnaService;
@@ -26,13 +25,10 @@ public class MentorQnaController {
 
     private final QnaService qnaService;
 
-    @Operation(summary = "Q&A 답변 등록 (멘토용)", description = "멘토가 멘티의 Q&A 질문에 답변을 등록합니다. {userId}와 {userRole}은 인증된 사용자의 ID와 역할입니다.")
+    @Operation(summary = "Q&A 답변 등록 (멘토용)", description = "멘토가 멘티의 Q&A 질문에 답변을 등록합니다.")
     @PutMapping("/answer")
-    public ResponseEntity<CommonResponse<QnaResponseDto>> answerQna(
-            @PathVariable Long userId,
-            @PathVariable String userRole,
-            @Valid @RequestBody QnaAnswerRequestDto requestDto) {
-        QnaResponseDto response = qnaService.answerQna(userId, Role.valueOf(userRole.toUpperCase()), requestDto);
+    public ResponseEntity<CommonResponse<QnaResponseDto>> answerQna(@Valid @RequestBody QnaAnswerRequestDto requestDto) {
+        QnaResponseDto response = qnaService.answerQna(requestDto);
         return ResponseEntity.ok(CommonResponse.of(response));
     }
 
@@ -46,7 +42,7 @@ public class MentorQnaController {
     @Operation(summary = "멘토별 Q&A 목록 조회", description = "멘토가 답변해야 할 또는 답변한 모든 Q&A 목록을 조회합니다.")
     @GetMapping
     public ResponseEntity<CommonResponse<List<QnaResponseDto>>> getQnasByMentorId(
-            @Parameter(description = "멘토 ID", required = true, example = "2") @RequestParam(value = "mentorId") Long mentorId,
+            @Parameter(description = "멘토 ID", required = true, example = "1") @RequestParam(value = "mentorId") Long mentorId,
             @Parameter(description = "조회 날짜 (YYYY-MM-DD)", required = true, example = "2026-02-09") @RequestParam(value = "date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         List<QnaResponseDto> response = qnaService.getQnaByMentorIdAndDate(mentorId, date);
         return ResponseEntity.ok(CommonResponse.of(response));
