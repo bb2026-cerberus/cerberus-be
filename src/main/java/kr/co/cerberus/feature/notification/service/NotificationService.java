@@ -21,8 +21,11 @@ import kr.co.cerberus.global.config.WebPushProperties;
 
 
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -136,6 +139,58 @@ public class NotificationService {
     private String escape(String v) {
         return v == null ? "" : v.replace("\"", "\\\"");
     }
+
+
+    @Transactional
+    public void notifyIncompleteTodos(LocalDate targetDate) {
+
+        // 1️⃣ 어제까지의 미완료 todo 조회
+        List<Todo> todos = todoRepository
+                .findByTodoDateBeforeAndTodoCompleteYnAndDeleteYn(
+                        targetDate.plusDays(1), // 오늘 포함 안 되게
+                        "N",
+                        "N"
+                );
+
+        if (todos.isEmpty()) return;
+
+        // 2️⃣ 멘티별 그룹핑
+        Map<Long, List<Todo>> todosByMentee = todos.stream()
+                .collect(Collectors.groupingBy(Todo::getMenteeId));
+
+        // 3️⃣ 멘티별 알림 생성
+        for (Map.Entry<Long, List<Todo>> entry : todosByMentee.entrySet()) {
+            Long menteeId = entry.getKey();
+            List<Todo> list = entry.getValue();
+
+            String title = "아직 완료하지 않은 할 일이 있어요";
+            String content = String.format(
+                    "미완료된 할 일/과제가 %d개 있어요. 오늘 확인해보세요!",
+                    list.size()
+            );
+
+            Notification noti = Notification.builder()
+                    .menteeId(menteeId)
+                    .notificationType(NotificationType.REMIND)
+                    .dataId(null)
+                    .title(title)
+                    .content(content)
+                    .sentAt(LocalDateTime.now())
+                    .readYn("N")
+                    .build();
+
+            notificationRepository.save(noti);
+
+            // 4️⃣ 푸시 (구독 있으면만)
+            sendWebPushAsync(
+                    menteeId,
+                    title,
+                    content,
+                    "/assignments"
+            );
+        }
+    }
+
 
 
 }
