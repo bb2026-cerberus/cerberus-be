@@ -164,4 +164,19 @@ public class TodoController {
 	) {
 		return ResponseEntity.ok(CommonResponse.of(todoService.getTimersByDate(menteeId, date)));
 	}
+
+    @Operation(summary = "홈 일별 조회", description = "특정 날짜의 할일/과제 개요를 조회합니다.")
+    @GetMapping("/daily/overview")
+    public ResponseEntity<CommonResponse<TodoDailyOverviewResponseDto>> getDailyOverview(
+            @RequestParam("menteeId") Long menteeId,
+            @RequestParam(value = "date", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date
+    ) {
+        LocalDate targetDate = (date == null) ? LocalDate.now() : date;
+
+        return ResponseEntity.ok(
+                CommonResponse.of(todoService.getDailyOverview(menteeId, targetDate))
+        );
+    }
+
 }

@@ -4,6 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -28,6 +29,12 @@ public class TodoTimerDailyResponseDto {
         private String title;
         private String subject;
         private String note;
+//        todo의 모든 정보
+        private String name;
+        private String assignYn;
+
+//        실제 todoAssignYN의 값이 N이면 과제고, Y면 할일이라 변환해줘야함
+
 
         // 해당 Todo의 총 시간(분)
         private long totalMinutes;
