@@ -112,6 +112,15 @@ public class SolutionService {
                 .collect(Collectors.toList());
     }
 
+    // 멘티의 약점 솔루션 목록 조회
+    public List<SolutionResponseDto> getWeaknessSolutionsByMentee(Long menteeId) {
+        List<Solution> solutions = solutionRepository.findByMenteeIdAndDeleteYn(menteeId, "N");
+
+        return solutions.stream()
+                .map(this::mapToResponseDto)
+                .collect(Collectors.toList());
+    }
+
     private SolutionResponseDto mapToResponseDto(Solution solution) {
         FileInfo fileInfo = null;
         String fileJson = solution.getSolutionFile();

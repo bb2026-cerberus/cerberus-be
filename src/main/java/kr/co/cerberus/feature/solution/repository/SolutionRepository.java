@@ -11,7 +11,7 @@ public interface SolutionRepository extends JpaRepository<Solution, Long> {
     List<Solution> findByMentorIdAndMenteeIdAndDeleteYn(Long mentorId, Long menteeId, String deleteYn);
     List<Solution> findByMentorId(Long mentorId);
     List<Solution> findByMentorIdAndDeleteYn(Long mentorId, String deleteYn);
-
+    List<Solution> findByMenteeIdAndDeleteYn(Long menteeId, String deleteYn);
 	Optional<Solution> findByIdAndDeleteYn(Long id, String deleteYn);
 
     List<Solution> findByMenteeId(Long menteeId);
