@@ -115,7 +115,7 @@ public class SolutionService {
     public List<SolutionResponseDto> getWeaknessSolutionsByMentee(Long menteeId) {
         List<Solution> solutions;
 
-        solutions = solutionRepository.findByMenteeId(menteeId);
+        solutions = solutionRepository.findByMenteeIdAndDeleteYn(menteeId, "N");
 
         return solutions.stream()
                 .map(this::mapToResponseDto)
