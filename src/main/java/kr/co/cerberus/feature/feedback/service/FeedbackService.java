@@ -344,6 +344,7 @@ public class FeedbackService {
                             FeedbackWeeklyResponseDto.FeedbackDetailDto fb = item.feedback();
                             return FeedbackWeeklyBySubjectResponseDto.FeedbackDetailDto.builder()
                                     .todoId(item.todoId())
+                                    .todoType("Y".equals(item.todoAssignYn()) ? "ASSIGNMENT" : "TODO")
                                     .menteeId(item.menteeId())
                                     .todoSubjects(item.todoSubjects())
                                     .feedbackId(fb.feedbackId())

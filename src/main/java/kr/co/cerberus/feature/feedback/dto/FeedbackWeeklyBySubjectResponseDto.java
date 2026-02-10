@@ -15,6 +15,7 @@ public record FeedbackWeeklyBySubjectResponseDto(
     @Builder
     public record FeedbackDetailDto(
             Long todoId,
+            String todoType,
             Long menteeId,
             String todoSubjects,
             Long feedbackId,
