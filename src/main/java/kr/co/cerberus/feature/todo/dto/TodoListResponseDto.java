@@ -14,4 +14,6 @@ public class TodoListResponseDto {
 	private String solution;
 	private LocalDate date;
 	private boolean completed;
+	private Long menteeId;
+	private String menteeName;
 }

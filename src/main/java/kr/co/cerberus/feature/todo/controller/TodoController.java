@@ -36,21 +36,21 @@ public class TodoController {
 	@Operation(summary = "할일 목록 조회", description = "전체/기간별/일별 할일 목록을 조회합니다. startDate만 있으면 일별, startDate+endDate는 기간별, 둘 다 없으면 전체 조회")
 	@GetMapping
 	public ResponseEntity<CommonResponse<List<GroupedTodosResponseDto>>> getTodos(
-			@Parameter(description = "멘티 ID", example = "2") @RequestParam(value = "menteeId") Long menteeId,
+			@Parameter(description = "멘티 ID 목록", example = "2,3") @RequestParam(value = "menteeId") List<Long> menteeIds,
 			@Parameter(description = "시작 날짜 (YYYY-MM-DD), startDate만 있으면 일별, startDate+endDate는 기간별, 둘 다 없으면 전체 조회", example = "2026-02-01") @RequestParam(value = "startDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
 			@Parameter(description = "종료 날짜 (YYYY-MM-DD)", example = "2026-02-20") @RequestParam(value = "endDate", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
-		List<GroupedTodosResponseDto> todos = todoService.findTodos(menteeId, startDate, endDate);
+		List<GroupedTodosResponseDto> todos = todoService.findTodos(menteeIds, startDate, endDate);
 		return ResponseEntity.ok(CommonResponse.of(todos));
 	}
 
 	@Operation(summary = "주차별 할일 목록 조회", description = "특정 주차의 월요일 날짜를 기준으로 해당 주(월~일)의 할일 목록을 조회")
 	@GetMapping("/weekly")
 	public ResponseEntity<CommonResponse<List<GroupedTodosResponseDto>>> getTodosWeekly(
-			@Parameter(description = "멘티 ID", example = "2") @RequestParam(value = "menteeId") Long menteeId,
+			@Parameter(description = "멘티 ID 목록", example = "2,3") @RequestParam(value = "menteeId") List<Long> menteeIds,
 			@Parameter(description = "주차의 월요일 날짜 (YYYY-MM-DD)", example = "2026-02-02") @RequestParam(value = "mondayDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate mondayDate) {
 
-		List<GroupedTodosResponseDto> weeklyTodos = todoService.findTodosWeekly(menteeId, mondayDate);
+		List<GroupedTodosResponseDto> weeklyTodos = todoService.findTodosWeekly(menteeIds, mondayDate);
 		return ResponseEntity.ok(CommonResponse.of(weeklyTodos));
 	}
 

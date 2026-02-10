@@ -5,6 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import kr.co.cerberus.feature.feedback.Feedback;
 import kr.co.cerberus.feature.feedback.dto.FeedbackDetailResponseDto;
 import kr.co.cerberus.feature.feedback.repository.FeedbackRepository;
+import kr.co.cerberus.feature.member.Member;
+import kr.co.cerberus.feature.member.repository.MemberRepository;
 import kr.co.cerberus.feature.solution.service.SolutionService;
 import kr.co.cerberus.feature.todo.Todo;
 import kr.co.cerberus.feature.todo.dto.*;
@@ -38,16 +40,17 @@ public class TodoService {
 	private final FeedbackRepository feedbackRepository;
 	private final SolutionService solutionService;
 	private final FileStorageService fileStorageService;
+	private final MemberRepository memberRepository;
 
-	public List<GroupedTodosResponseDto> findTodos(Long menteeId, LocalDate startDate, LocalDate endDate) {
+	public List<GroupedTodosResponseDto> findTodos(List<Long> menteeIds, LocalDate startDate, LocalDate endDate) {
 		List<Todo> todos;
 
 		if (startDate == null) {
-			todos = todoRepository.findByMenteeIdAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeId, "N", "N", "N");
+			todos = todoRepository.findByMenteeIdInAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeIds, "N", "N", "N");
 		} else if (endDate == null) {
-			todos = todoRepository.findByMenteeIdAndTodoDateAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeId, startDate, "N", "N", "N");
+			todos = todoRepository.findByMenteeIdInAndTodoDateAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeIds, startDate, "N", "N", "N");
 		} else {
-			todos = todoRepository.findByMenteeIdAndTodoDateBetweenAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeId, startDate, endDate, "N", "N", "N");
+			todos = todoRepository.findByMenteeIdInAndTodoDateBetweenAndTodoAssignYnAndDeleteYnAndTodoDraftYn(menteeIds, startDate, endDate, "N", "N", "N");
 		}
 
 		// N+1 최적화: 필요한 Solution ID들을 수집하여 한 번에 조회
@@ -58,6 +61,13 @@ public class TodoService {
 
 		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionContent(solutionIds);
 
+		// N+1 최적화: 멘티 이름 수집
+		Set<Long> distinctMenteeIds = todos.stream()
+				.map(Todo::getMenteeId)
+				.collect(Collectors.toSet());
+		Map<Long, String> menteeNameMap = memberRepository.findAllById(distinctMenteeIds).stream()
+				.collect(Collectors.toMap(Member::getId, Member::getMemName));
+
 		todos.sort(Comparator.comparing(Todo::getTodoDate).reversed());
 		Map<LocalDate, List<TodoListResponseDto>> groupedTodos = todos.stream()
 				.map(todo -> TodoListResponseDto.builder()
@@ -67,6 +77,8 @@ public class TodoService {
 						.solution(solutionTitleMap.get(todo.getSolutionId()))
 						.date(todo.getTodoDate())
 						.completed("Y".equals(todo.getTodoCompleteYn()))
+						.menteeId(todo.getMenteeId())
+						.menteeName(menteeNameMap.getOrDefault(todo.getMenteeId(), "알 수 없음"))
 						.build())
 				.collect(Collectors.groupingBy(TodoListResponseDto::getDate, TreeMap::new, Collectors.toList()));
 
@@ -89,6 +101,11 @@ public class TodoService {
 
 		Map<Long, String> solutionTitleMap = solutionService.getAllSolutionContent(solutionIds);
 
+		// 멘티 이름 (단일 멘티)
+		String menteeName = memberRepository.findById(menteeId)
+				.map(Member::getMemName)
+				.orElse("알 수 없음");
+
 		todos.sort(Comparator.comparing(Todo::getTodoDate).reversed());
 		Map<LocalDate, List<TodoListResponseDto>> groupedTodos = todos.stream()
 				.map(todo -> TodoListResponseDto.builder()
@@ -98,6 +115,8 @@ public class TodoService {
 						.solution(solutionTitleMap.get(todo.getSolutionId()))
 						.date(todo.getTodoDate())
 						.completed("Y".equals(todo.getTodoCompleteYn()))
+						.menteeId(todo.getMenteeId())
+						.menteeName(menteeName)
 						.build())
 				.collect(Collectors.groupingBy(TodoListResponseDto::getDate, TreeMap::new, Collectors.toList()));
 
@@ -109,10 +128,10 @@ public class TodoService {
 				.toList();
 	}
 
-	public List<GroupedTodosResponseDto> findTodosWeekly(Long menteeId, LocalDate mondayDate) {
+	public List<GroupedTodosResponseDto> findTodosWeekly(List<Long> menteeIds, LocalDate mondayDate) {
 		LocalDate startDate = mondayDate.with(DayOfWeek.MONDAY);
 		LocalDate endDate = mondayDate.plusDays(6);
-		return findTodos(menteeId, startDate, endDate);
+		return findTodos(menteeIds, startDate, endDate);
 	}
 
 	public TodoDetailResponseDto findTodoDetail(Long todoId) {
