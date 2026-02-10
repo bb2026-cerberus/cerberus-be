@@ -50,12 +50,13 @@ public class TodoController {
 	@Operation(summary = "주차별 목록 조회", description = "특정 주차의 월요일 날짜를 기준으로 할일/과제 목록을 조회")
 	@GetMapping("/weekly")
 	public ResponseEntity<CommonResponse<List<GroupedTodosResponseDto>>> getTodosWeekly(
+			@Parameter(description = "멘토 ID", example = "2") @RequestParam(value = "mentorId") Long mentorId,
 			@Parameter(description = "멘티 ID 목록", example = "2,3") @RequestParam(value = "menteeId") List<Long> menteeIds,
 			@Parameter(description = "월요일 날짜 (YYYY-MM-DD)") @RequestParam(value = "mondayDate") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate mondayDate,
 			@Parameter(description = "과제 여부 (Y/N)", example = "N") @RequestParam(value = "assignYn", defaultValue = "N") String assignYn,
 			@Parameter(description = "임시저장 여부 (Y/N)", example = "N") @RequestParam(value = "draftYn", defaultValue = "N") String draftYn
 	) {
-		List<GroupedTodosResponseDto> weeklyTodos = todoService.findTodosWeekly(menteeIds, mondayDate, assignYn, draftYn);
+		List<GroupedTodosResponseDto> weeklyTodos = todoService.findTodosWeekly(mentorId, menteeIds, mondayDate, assignYn, draftYn);
 		return ResponseEntity.ok(CommonResponse.of(weeklyTodos));
 	}
 

@@ -104,10 +104,10 @@ public class TodoService {
 				.toList();
 	}
 
-	public List<GroupedTodosResponseDto> findTodosWeekly(List<Long> menteeIds, LocalDate mondayDate, String assignYn, String draftYn) {
+	public List<GroupedTodosResponseDto> findTodosWeekly(Long mentorId, List<Long> menteeIds, LocalDate mondayDate, String assignYn, String draftYn) {
 		LocalDate startDate = mondayDate.with(DayOfWeek.MONDAY);
 		LocalDate endDate = mondayDate.plusDays(6);
-		return findTodos(menteeIds, startDate, endDate, assignYn, draftYn);
+		return findTodos(mentorId, menteeIds, startDate, endDate, assignYn, draftYn);
 	}
 
 	/**
@@ -227,9 +227,11 @@ public class TodoService {
 				request.getTitle(),
 				request.getContent(),
 				request.getSubject().getDescription(),
-				request.getDates().get(0), // 단일 수정 시 첫 번째 날짜 사용
+				request.getDates().getFirst(),
 				request.getScheduledTime(),
-				request.getSolutionId()
+				request.getSolutionId(),
+				request.getAssignYn(),
+				request.getDraftYn()
 		);
 		
 		if (request.getAssignYn() != null) todo.assign(); // Simple logic to update status if needed

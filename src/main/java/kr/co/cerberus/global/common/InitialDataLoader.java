@@ -71,7 +71,6 @@ public class InitialDataLoader implements CommandLineRunner {
                 new SolutionDef("수학", "확률과 통계 심화", "조건부 확률 기출 문제 분석"),
                 new SolutionDef("국어", "비문학 독해 전략", "과학/경제 지문 구조 분석 및 요약"),
                 new SolutionDef("영어", "수능 필수 구문 독해", "복합 관계사 및 가정법 구문 마스터"),
-                new SolutionDef("과학", "물리 I 역학 완전 정복", "뉴턴의 운동 법칙과 에너지 보존 법칙")
         };
 
         // 멘티1: 4개 할당 (0, 1, 2, 3)
@@ -82,7 +81,7 @@ public class InitialDataLoader implements CommandLineRunner {
 
         // 멘티2: 3개 할당 (2, 3, 4) -> 2, 3번이 공통 솔루션
         List<Solution> mentee2Solutions = new ArrayList<>();
-        for (int i = 2; i < 5; i++) {
+        for (int i = 2; i < 4; i++) {
             mentee2Solutions.add(saveSolution(mentor.getId(), mentee2.getId(), solutionPool[i]));
         }
 
@@ -136,7 +135,7 @@ public class InitialDataLoader implements CommandLineRunner {
 
         // 할 일 (Mentee-created): 3~4개
         int todoCount = 3 + random.nextInt(2);
-        String[] subjects = {"국어", "수학", "영어", "탐구", "자습"};
+        String[] subjects = {"국어", "수학", "영어"};
         for (int i = 1; i <= todoCount; i++) {
             String subject = subjects[random.nextInt(subjects.length)];
             boolean isComplete = !date.equals(END_DATE) && random.nextDouble() < 0.7;

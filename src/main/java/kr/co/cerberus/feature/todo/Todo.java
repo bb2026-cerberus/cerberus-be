@@ -14,6 +14,7 @@ import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -131,12 +132,14 @@ public class Todo extends BaseEntity {
 		this.todoAssignYn = "Y";
 	}
 
-	public void update(String title, String content, String subjects, LocalDate date, java.time.LocalTime scheduledTime, Long solutionId) {
+	public void update(String title, String content, String subjects, LocalDate date, LocalTime scheduledTime, Long solutionId, String todoAssignYn, String todoDraftYn) {
 		this.todoName = title;
 		this.todoNote = content;
 		this.todoSubjects = subjects;
 		this.todoDate = date;
 		this.scheduledTime = scheduledTime;
 		this.solutionId = solutionId;
+		this.todoDraftYn = todoDraftYn;
+		this.todoAssignYn = todoAssignYn;
 	}
 }
