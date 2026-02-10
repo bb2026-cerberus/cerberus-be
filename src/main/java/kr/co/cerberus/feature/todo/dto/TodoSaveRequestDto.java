@@ -30,7 +30,7 @@ public class TodoSaveRequestDto {
 	@Schema(description = "내용", example = "수학의 정석 미적분 20페이지부터 25페이지까지 풀고 채점하기")
 	private String content;
 
-	@Schema(description = "날짜 목록 (할일은 보통 1개, 과제는 여러 개 가능)", example = "["2026-02-08"]")
+	@Schema(description = "날짜 목록 (할일은 보통 1개, 과제는 여러 개 가능)", example = "2026-02-08")
 	private List<LocalDate> dates;
 
 	@Schema(description = "시간 (HH:mm)", example = "14:30")
