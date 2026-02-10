@@ -112,6 +112,16 @@ public class SolutionService {
                 .collect(Collectors.toList());
     }
 
+    public List<SolutionResponseDto> getWeaknessSolutionsByMentee(Long menteeId) {
+        List<Solution> solutions;
+
+        solutions = solutionRepository.findByMenteeId(menteeId);
+
+        return solutions.stream()
+                .map(this::mapToResponseDto)
+                .collect(Collectors.toList());
+    }
+
     private SolutionResponseDto mapToResponseDto(Solution solution) {
         FileInfo fileInfo = null;
         String fileJson = solution.getSolutionFile();

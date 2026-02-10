@@ -1,6 +1,7 @@
 package kr.co.cerberus.feature.qna.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import kr.co.cerberus.feature.member.Role;
 import kr.co.cerberus.feature.qna.dto.QnaAnswerRequestDto;
@@ -46,5 +47,14 @@ public class MentorQnaController {
             @PathVariable String userRole) {
         List<QnaResponseDto> response = qnaService.getQnasByMentorId(mentorId, Role.valueOf(userRole.toUpperCase()));
         return ResponseEntity.ok(CommonResponse.of(response));
+    }
+
+    @Operation(summary = "Q&A 삭제", description = "멘토가 등록한 Q&A를 삭제합니다.")
+    @DeleteMapping
+    public ResponseEntity<CommonResponse<Void>> deleteQna(
+            @Parameter(description = "Q&A ID", required = true, example = "1") @RequestParam(value = "qnaId") Long qnaId) {
+
+        qnaService.deleteQna(qnaId);
+        return ResponseEntity.ok(CommonResponse.of(null));
     }
 }
