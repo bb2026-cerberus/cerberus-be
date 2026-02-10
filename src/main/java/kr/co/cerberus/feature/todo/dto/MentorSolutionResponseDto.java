@@ -1,4 +1,4 @@
-package kr.co.cerberus.feature.assignment.dto;
+package kr.co.cerberus.feature.todo.dto;
 
 public record MentorSolutionResponseDto(
         Long solutionId,

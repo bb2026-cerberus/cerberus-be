@@ -17,4 +17,6 @@ public class TodoListResponseDto {
 	private boolean completed;
 	private Long menteeId;
 	private String menteeName;
+	private String assignYn;
+	private String draftYn;
 }
